@@ -1,646 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Stock Bicycle Race</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #ffffff; color: #131722; font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif; touch-action: none; user-select: none; }
-        canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
-        
-        .ui-layer { position: absolute; z-index: 10; pointer-events: none; }
-        .interactive { pointer-events: auto; }
-        .hidden { display: none !important; }
-        
-        input, select { background-color: #f0f3fa; border: 1px solid #d1d4dc; color: #131722; outline: none; transition: border 0.2s; }
-        input:focus, select:focus { border-color: #2962ff; }
-        
-        .control-btn {
-            background: #ffffff; border: 2px solid #2962ff; color: #2962ff;
-            border-radius: 50%; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center;
-            font-size: 28px; font-weight: 900; box-shadow: 0 4px 15px rgba(41, 98, 255, 0.2); transition: all 0.05s ease;
-        }
-        .control-btn:active { background: #2962ff; color: #ffffff; transform: scale(0.9); }
-
-        .tv-toolbar { background-color: #ffffff; border-color: #e0e3eb; }
-        .tv-icon { width: 24px; height: 24px; fill: #787b86; cursor: pointer; transition: fill 0.2s; }
-        .tv-icon:hover { fill: #131722; }
-    </style>
-</head>
-<body>
-
-    <!-- TradingView 上方工具列 -->
-    <div class="ui-layer interactive w-full h-[50px] tv-toolbar border-b flex items-center px-4 justify-between z-20">
-        <div class="flex items-center space-x-4">
-            <div class="flex items-center space-x-2 cursor-pointer">
-                <div class="w-7 h-7 bg-[#e21c31] rounded-full flex items-center justify-center text-white font-bold text-[16px] leading-none pb-[2px]">T</div>
-                <span class="font-black text-lg text-[#131722] tracking-wide" id="tv-ticker">TSLA</span>
-            </div>
-            <div class="h-6 w-px bg-[#e0e3eb]"></div>
-            <div class="flex space-x-3 text-[#787b86] font-semibold text-sm">
-                <span class="hover:text-[#131722] cursor-pointer">1D</span>
-                <span class="hover:text-[#131722] cursor-pointer">5D</span>
-                <span class="hover:text-[#131722] cursor-pointer">1M</span>
-            </div>
-            <div class="h-6 w-px bg-[#e0e3eb] hidden md:block"></div>
-            <div class="hidden md:flex space-x-3">
-                <svg class="tv-icon" viewBox="0 0 28 28"><path d="M12 14.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm-2.5-1.5a2.5 2.5 0 1 1 5 0 2.5 2.5 0 0 1-5 0zM15 8h4v1h-4V8zm0 11h4v1h-4v-1zm-6-5h4v1H9v-1z" fill-rule="evenodd"/></svg>
-                <span class="text-sm font-semibold text-[#787b86] hover:text-[#131722] cursor-pointer pt-0.5">技術指標</span>
-                <svg class="tv-icon" viewBox="0 0 28 28"><path d="M11 9h6v1h-6V9zm0 4h6v1h-6v-1zm0 4h6v1h-6v-1zM8 7h12v14H8V7zm1 1v12h10V8H9z" fill-rule="evenodd"/></svg>
-            </div>
-        </div>
-        <div class="flex items-center space-x-4 text-sm font-mono text-[#787b86]">
-            <span>O:<span id="tv-o" class="text-[#131722]">0.00</span></span>
-            <span>H:<span id="tv-h" class="text-[#131722]">0.00</span></span>
-            <span>L:<span id="tv-l" class="text-[#131722]">0.00</span></span>
-            <span>C:<span id="tv-c" class="text-[#131722]">0.00</span></span>
-        </div>
-    </div>
-
-    <!-- TradingView 左側繪圖工具列 -->
-    <div class="ui-layer interactive w-[50px] h-full pt-[50px] tv-toolbar border-r flex flex-col items-center py-4 space-y-5 z-10 hidden sm:flex">
-        <svg class="tv-icon" viewBox="0 0 28 28"><path d="M14 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-1 6a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm1 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
-        <svg class="tv-icon" viewBox="0 0 28 28"><path d="M7 14.5A1.5 1.5 0 1 1 7 11.5a1.5 1.5 0 0 1 0 3zm14 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM8.33 12h11.34v1H8.33v-1z"/></svg>
-        <svg class="tv-icon" viewBox="0 0 28 28"><path d="M10 8h2v1h-2V8zm0 4h6v1h-6v-1zm0 4h8v1h-8v-1z"/></svg>
-        <svg class="tv-icon" viewBox="0 0 28 28"><path d="M18.83 8.17l.7.7-8.48 8.49-.7-.7 8.48-8.49zM10.5 15.5l2 2-3 1 1-3z"/></svg>
-        <svg class="tv-icon" viewBox="0 0 28 28"><path d="M11 11h6v1h-6v-1zm0 3h6v1h-6v-1zm-2-6h10v10H9V8zm1 1v8h8V9h-8z"/></svg>
-        <div class="w-6 border-b border-[#e0e3eb] my-2"></div>
-        <svg class="tv-icon" viewBox="0 0 28 28"><path d="M13 14a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3-1a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>
-        <svg class="tv-icon" viewBox="0 0 28 28"><path d="M9 10h10v1H9v-1zm0 4h10v1H9v-1z"/></svg>
-    </div>
-
-    <canvas id="gameCanvas"></canvas>
-
-    <!-- UI 大廳與互動層 -->
-    <div id="ui-container" class="ui-layer interactive w-full h-full flex flex-col items-center justify-center p-4 z-30 bg-[#ffffff] bg-opacity-95">
-        
-        <div id="custom-alert" class="hidden fixed top-[70px] bg-[#f23645] text-white px-6 py-3 rounded shadow-lg z-50 font-bold tracking-wide">
-            ⚠️ <span id="alert-text">提示</span>
-        </div>
-
-        <div id="lobby-screen" class="bg-white p-8 rounded-xl shadow-[0_10px_30px_rgba(19,23,34,0.1)] border border-[#e0e3eb] max-w-md w-full text-center">
-            <h1 class="text-3xl font-black mb-1 text-[#131722] tracking-tight">Stock Bicycle Race</h1>
-            <p class="text-[#787b86] mb-8 text-sm font-semibold">控制速度，別在崩盤時跌倒！</p>
-            
-            <input type="text" id="playerName" placeholder="輸入你的 ID" class="w-full p-3 mb-6 rounded text-center text-lg font-bold" maxlength="10">
-            
-            <div id="join-options" class="flex flex-col gap-4">
-                <div class="bg-[#f8f9fd] p-4 rounded border border-[#e0e3eb]">
-                    <h3 class="text-sm text-[#131722] mb-3 font-bold text-left">建立派對 (莊家)</h3>
-                    <div class="flex gap-2 mb-3">
-                        <input type="text" id="customRoomId" placeholder="自訂好記房號" class="w-full p-2 rounded text-center text-sm font-mono font-bold">
-                    </div>
-                    <button id="btnCreateRoom" class="w-full py-2.5 bg-[#2962ff] hover:bg-[#1e4bd8] rounded font-bold text-white transition shadow-md">建立賽道</button>
-                </div>
-                
-                <div class="flex items-center gap-2"><hr class="flex-grow border-[#e0e3eb]"><span class="text-[#b2b5be] text-xs font-bold">OR</span><hr class="flex-grow border-[#e0e3eb]"></div>
-                
-                <div class="flex gap-2">
-                    <input type="text" id="roomIdInput" placeholder="輸入朋友房號" class="w-2/3 p-3 rounded text-center font-mono font-bold">
-                    <button id="btnJoinRoom" class="w-1/3 bg-[#089981] hover:bg-[#067a67] rounded text-white font-bold transition shadow-md">加入</button>
-                </div>
-            </div>
-
-            <div id="room-waiting" class="hidden flex-col items-center mt-2">
-                <div class="flex justify-between items-center w-full bg-[#f8f9fd] p-3 rounded border border-[#e0e3eb] mb-4">
-                    <div class="text-left">
-                        <p class="text-xs text-[#787b86] font-bold">目前房號</p>
-                        <h2 id="displayRoomId" class="text-xl text-[#2962ff] font-black tracking-widest select-all">---</h2>
-                    </div>
-                    <button id="btnCopyLink" class="bg-[#e0e3eb] hover:bg-[#d1d4dc] text-[#131722] text-xs font-bold px-3 py-2 rounded transition shadow-sm">🔗 複製連結</button>
-                </div>
-                
-                <div class="w-full bg-white rounded p-4 mb-4 min-h-[120px] text-left border border-[#e0e3eb] shadow-inner">
-                    <h3 class="text-[#131722] text-sm mb-2 font-bold border-b border-[#e0e3eb] pb-2">已就位車手：</h3>
-                    <ul id="playerList" class="space-y-1 font-mono font-bold text-[#131722] mt-2"></ul>
-                </div>
-                <button id="btnStartGame" class="w-full py-3 bg-[#f23645] hover:bg-[#d92c3a] rounded font-black text-white text-xl transition shadow-lg hidden">🚀 發車！</button>
-                <p id="waitingText" class="text-[#787b86] animate-pulse text-sm font-bold mt-2">等待莊家發車...</p>
-            </div>
-        </div>
-
-        <div id="game-hud" class="hidden w-full h-full flex-col justify-between pointer-events-none absolute top-0 left-0">
-            <div class="mt-[60px] ml-[60px] mr-4 flex justify-between items-start pointer-events-auto">
-                <div class="bg-white p-2 px-3 rounded text-sm font-mono border border-[#e0e3eb] shadow-md">
-                    <div class="text-[#787b86] font-bold">賽道完成度</div>
-                    <div id="hud-dist" class="text-[#2962ff] font-black text-lg">0%</div>
-                </div>
-
-                <div id="crash-warning" class="hidden bg-[#f23645] text-white px-5 py-2 rounded-full font-black animate-bounce shadow-lg">
-                    💥 跌倒！(爬起中...)
-                </div>
-            </div>
-            
-            <div class="flex justify-between items-end pb-8 px-8 pointer-events-auto w-full">
-                <div></div>
-                <div><button id="btnGas" class="control-btn">GO</button></div>
-            </div>
-        </div>
-
-        <div id="result-screen" class="hidden bg-white p-8 rounded-xl shadow-[0_10px_30px_rgba(19,23,34,0.15)] border border-[#e0e3eb] max-w-md w-full text-center">
-            <h1 class="text-3xl font-black mb-6 text-[#131722] tracking-tight">收盤結算</h1>
-            <div id="leaderboard" class="w-full bg-[#f8f9fd] rounded p-4 mb-6 text-left space-y-2 border border-[#e0e3eb]"></div>
-            <div id="loser-pays" class="bg-[#fff0f0] border-2 border-[#f23645] p-5 rounded-lg mb-6 shadow-sm">
-                <h2 class="text-xl font-bold text-[#f23645]">🚨 還不去結帳 🚨</h2>
-                <p id="loserName" class="text-3xl font-black text-[#131722] mt-2">某某某</p>
-                <p class="text-sm text-[#f23645] mt-1 font-bold tracking-wider">Go pay the bill, loser!</p>
-            </div>
-            <div class="flex gap-3">
-                <button id="btnRematch" class="w-full py-3 bg-[#2962ff] hover:bg-[#1e4bd8] text-white rounded font-bold transition shadow-md hidden">🔄 再戰一局</button>
-                <button id="btnWaitRematch" class="w-full py-3 bg-[#f0f3fa] text-[#787b86] rounded font-bold cursor-not-allowed hidden">等待莊家重開...</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const UI = {
-            nameInput: document.getElementById('playerName'), roomIdInput: document.getElementById('roomIdInput'),
-            customRoomId: document.getElementById('customRoomId'), container: document.getElementById('ui-container'),
-            lobby: document.getElementById('lobby-screen'), joinOptions: document.getElementById('join-options'),
-            waiting: document.getElementById('room-waiting'), displayId: document.getElementById('displayRoomId'),
-            playerList: document.getElementById('playerList'), btnStart: document.getElementById('btnStartGame'),
-            btnCopyLink: document.getElementById('btnCopyLink'), waitingText: document.getElementById('waitingText'),
-            canvas: document.getElementById('gameCanvas'), hud: document.getElementById('game-hud'),
-            btnGas: document.getElementById('btnGas'), result: document.getElementById('result-screen'),
-            board: document.getElementById('leaderboard'), loserName: document.getElementById('loserName'),
-            btnRematch: document.getElementById('btnRematch'), btnWaitRematch: document.getElementById('btnWaitRematch'),
-            tvO: document.getElementById('tv-o'), tvH: document.getElementById('tv-h'), tvL: document.getElementById('tv-l'), tvC: document.getElementById('tv-c')
-        };
-        const ctx = UI.canvas.getContext('2d');
-
-        function showWarning(msg) {
-            const box = document.getElementById('custom-alert'); document.getElementById('alert-text').textContent = msg;
-            box.classList.remove('hidden'); setTimeout(() => box.classList.add('hidden'), 3000);
-        }
-
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('room')) { UI.roomIdInput.value = urlParams.get('room'); }
-
-        let myName = localStorage.getItem('playerName') || "";
-        UI.nameInput.value = myName;
-        
-        let peer = null, isHost = false, myId = null;
-        let connections = [], hostConnection = null, players = {};
-        let gameLoopId = null, lastTime = 0;
-        
-        const myColor = ["#2962ff", "#f23645", "#089981", "#ff9800", "#9c27b0", "#e91e63"][Math.floor(Math.random()*6)];
-        
-        // 100句 迷因金句資料庫
-        const memeQuotes = [
-            // WSB & 經典交易韭菜語錄
-            "Buy high, sell low!", "Diamond hands! 💎🙌", "To the moon?! 🚀", "Margin called... 📉",
-            "Wendy's dumpster here I come.", "It's just a dip... right?", "HODL!", "My wife's boyfriend is mad.",
-            "Stop loss triggered.", "Aaaand it's gone.", "GUH.", "Stonks only go up!",
-            "Printer goes brrrr", "I am never financially recovering.", "Buy the dip they said...",
-            "It's priced in.", "Short squeeze incoming!", "Paper hands...", "Should have bought NVDA.",
-            "Bulls make money, bears make money...",
-            
-            // 馬斯克 & 特斯拉 & SpaceX 梗
-            "Funding secured at 420.", "Where is my Cybercab?", "FSD next year, I swear!", "Mars is looking far today.",
-            "Dogecoin to $1!", "Did Elon tweet again?!", "Optimus, save my portfolio!", "Taking TSLA private.",
-            "Burnt hair perfume?", "SpaceX exploded my savings.", "My Cybertruck is rusting!", "Giga Texas is burning money.",
-            "Elon, please stop tweeting.", "I bought TSLA at $400...", "Starlink connection lost.",
-            "Robotaxi is delayed... again.", "X.com bankrupts me.", "Pay this meal in Doge?",
-            "Master Plan Part 4: Margin Call.", "Another stock split will fix it.",
-            
-            // 崩潰與絕望
-            "F**k, give my money back!!", "Where is my Lambo?!", "I blame the Fed.", "Powell, why raise rates?!",
-            "Just one more green candle...", "I am a long-term investor now.", "Not a loss if you don't sell.",
-            "Averaging down... forever.", "Mom, can I borrow $100?", "Is market open on weekends?",
-            "I thought this was a casino.", "Sir, this is a Wendy's.", "My portfolio is a horror movie.",
-            "Red is my favorite color anyway.", "I'm deleting my trading app.", "Can I refund my stocks?",
-            "What is diversification?", "YOLO'd my life savings.", "I miss 2020.", "Cathie Wood betrayed me.",
-            
-            // 幣圈與專有名詞嘲諷
-            "Wen Lambo?", "Wen moon?", "Rekt.", "Liquidated.", "Copium overdose.", "Hopium running out.",
-            "This is fine. 🔥", "Buying the top is an art.", "Catching falling knives.", "Dead cat bounce.",
-            "Bull trap!", "Bear trap!", "Theta gang took my money.", "0DTE options destroyed me.",
-            "I am the exit liquidity.", "Exit liquidity right here.", "Stop loss hunting.",
-            "Why did I listen to Jim Cramer?!", "Inverse Cramer never fails.", "I should have bought VOO.",
-            
-            // 隨機胡言亂語
-            "I hate money.", "Poverty builds character.", "Can I write this off my taxes?",
-            "Wall Street stole my lunch money.", "Working at McDonald's tomorrow.", "Need a sugar mommy now.",
-            "Selling my kidney for TSLA.", "Who needs retirement anyway?", "I will work until I'm 90.",
-            "At least I have my health...", "Heart rate is tracking the chart.", "Please let me break even.",
-            "I'll never trade again. (Lies)", "Just one good trade needed.", "Professional bag holder.",
-            "Heavy bags today.", "My arms are tired from holding bags.", "Can someone turn off the market?",
-            "I want a refund.", "Game over."
-        ];
-
-        // 賽道資料
-        const trackLength = 15000;
-        let candlesticks = [], maPoints = [], volumes = [];
-        
-        // 攝影機物件 (相對於世界座標)
-        let camera = { x: 0, y: 0 };
-        const cameraZoom = 0.55;
-
-        function generateMap() {
-            candlesticks = []; maPoints = []; volumes = [];
-            let currentPrice = 300;
-            const pointsCount = 180;
-            const stepX = trackLength / pointsCount;
-            let currentDate = new Date('2024-01-01');
-            
-            for (let i = 0; i <= pointsCount; i++) {
-                let open = currentPrice;
-                let change = (Math.random() - 0.5) * 45;
-                if (i === 30) change = -200; // 暴跌
-                if (i === 70) change = 180;  // 暴噴
-                if (i === 120) change = -150; 
-                
-                let close = open + change;
-                let high = Math.max(open, close) + Math.random() * 25;
-                let low = Math.min(open, close) - Math.random() * 25;
-                let vol = Math.random() * 100 + (Math.abs(change) > 100 ? 200 : 0);
-                
-                let dateStr = currentDate.toISOString().split('T')[0];
-                candlesticks.push({ x: i * stepX, open, close, high, low, date: dateStr });
-                volumes.push(vol);
-                currentPrice = close;
-                currentDate.setDate(currentDate.getDate() + 1 + Math.floor(Math.random() * 2));
-            }
-
-            for (let i = 0; i < candlesticks.length; i++) {
-                let sum = 0, count = 0;
-                for (let j = Math.max(0, i - 4); j <= i; j++) { sum += candlesticks[j].close; count++; }
-                let ma = sum / count;
-                maPoints.push({ x: candlesticks[i].x, y: 700 - ma }); 
-            }
-        }
-
-        function getTrackData(x) {
-            if (x <= 0) return { y: maPoints[0].y, angle: 0 };
-            if (x >= trackLength) return { y: maPoints[maPoints.length-1].y, angle: 0 };
-            for (let i = 0; i < maPoints.length - 1; i++) {
-                if (x >= maPoints[i].x && x < maPoints[i+1].x) {
-                    const p1 = maPoints[i], p2 = maPoints[i+1];
-                    const t = (x - p1.x) / (p2.x - p1.x);
-                    return { y: p1.y + t * (p2.y - p1.y), angle: Math.atan2(p2.y - p1.y, p2.x - p1.x) };
-                }
-            }
-            return { y: 0, angle: 0 };
-        }
-
-        let bike = {
-            x: 50, y: 0, vx: 0, vy: 0, angle: 0, 
-            isGasBtnDown: false, isAirborne: false, spinSpeed: 0,
-            isCrashed: false, crashTimer: 0, 
-            finished: false, finishTime: 0,
-            memeTriggerXs: [], isMemeFrozen: false, memeTimer: 0, memeText: ""
-        };
-        let startTime = 0;
-
-        function resetBike() {
-            bike = { 
-                x: 50, y: maPoints[0]?.y || 0, vx: 0, vy: 0, angle: 0, 
-                isGasBtnDown: false, isAirborne: false, spinSpeed: 0, 
-                isCrashed: false, crashTimer: 0, finished: false, finishTime: 0,
-                memeTriggerXs: [], isMemeFrozen: false, memeTimer: 0, memeText: ""
-            };
-            
-            // 每一場保證觸發 1 到 3 次崩潰迷因
-            let memeCount = Math.floor(Math.random() * 3) + 1;
-            for(let i = 0; i < memeCount; i++) {
-                // 隨機分配在賽道 10% ~ 90% 的位置
-                bike.memeTriggerXs.push(trackLength * (0.1 + Math.random() * 0.8));
-            }
-            // 依照距離遠近排序，依序觸發
-            bike.memeTriggerXs.sort((a, b) => a - b);
-
-            lastTime = 0;
-            camera = { x: 0, y: bike.y - UI.canvas.height / 2 / cameraZoom }; // 重置相機
-            document.getElementById('crash-warning').classList.add('hidden');
-        }
-
-        function setupPeerEvents(targetPeer) {
-            targetPeer.on('open', (id) => {
-                myId = id;
-                players[myId] = { name: myName, x: 50, y: 0, rot: 0, color: myColor, finished: false, crashed: false, memeFrozen: false, memeTxt: "" };
-                updatePlayerList();
-                UI.displayId.textContent = id;
-                if(isHost) { UI.btnStart.classList.remove('hidden'); UI.waitingText.classList.add('hidden'); }
-            });
-        }
-
-        document.getElementById('btnCreateRoom').onclick = () => {
-            if (!UI.nameInput.value.trim()) return showWarning('請輸入你的 ID');
-            myName = UI.nameInput.value.trim(); localStorage.setItem('playerName', myName);
-            isHost = true;
-            const reqId = UI.customRoomId.value.trim() || undefined;
-            peer = new Peer(reqId, { debug: 1 });
-            
-            UI.joinOptions.classList.add('hidden'); UI.waiting.classList.remove('hidden');
-            setupPeerEvents(peer);
-            peer.on('connection', (conn) => {
-                connections.push(conn);
-                conn.on('data', (data) => handleHostData(conn, data));
-            });
-        };
-
-        document.getElementById('btnJoinRoom').onclick = () => {
-            if (!UI.nameInput.value.trim()) return showWarning('請輸入你的 ID');
-            const roomId = UI.roomIdInput.value.trim();
-            if (!roomId) return showWarning('請輸入朋友房號');
-            
-            myName = UI.nameInput.value.trim(); localStorage.setItem('playerName', myName);
-            isHost = false; peer = new Peer({ debug: 1 });
-            UI.joinOptions.classList.add('hidden'); UI.waiting.classList.remove('hidden');
-            setupPeerEvents(peer);
-
-            setTimeout(() => {
-                hostConnection = peer.connect(roomId);
-                hostConnection.on('open', () => {
-                    UI.displayId.textContent = roomId;
-                    hostConnection.send({ type: 'join', id: myId, name: myName, color: myColor });
-                });
-                hostConnection.on('data', (data) => handleClientData(data));
-            }, 1000);
-        };
-
-        UI.btnCopyLink.onclick = () => {
-            const url = window.location.origin + window.location.pathname + '?room=' + UI.displayId.textContent;
-            navigator.clipboard.writeText(url); showWarning("✅ 邀請連結已複製！");
-        };
-
-        UI.btnStart.onclick = () => {
-            if (isHost) {
-                generateMap();
-                connections.forEach(c => c.send({ type: 'start_game', candles: candlesticks, ma: maPoints, vols: volumes })); 
-                startGame();
-            }
-        };
-
-        UI.btnRematch.onclick = () => {
-            if (isHost) {
-                generateMap();
-                connections.forEach(c => c.send({ type: 'rematch', candles: candlesticks, ma: maPoints, vols: volumes }));
-                prepareRematch();
-            }
-        };
-
-        function handleHostData(conn, data) {
-            if (data.type === 'join') {
-                players[data.id] = { name: data.name, x: 50, y: 0, rot: 0, color: data.color, finished: false, crashed: false, memeFrozen: false, memeTxt: "" };
-                updatePlayerList();
-                connections.forEach(c => c.send({ type: 'update_players', players: players }));
-            }
-            if (data.type === 'sync') {
-                if (players[data.id]) {
-                    players[data.id].x = data.x; players[data.id].y = data.y; players[data.id].rot = data.rot; 
-                    players[data.id].crashed = data.crashed; players[data.id].finished = data.finished;
-                    players[data.id].memeFrozen = data.memeFrozen; players[data.id].memeTxt = data.memeTxt;
-                    if(data.finished && !players[data.id].finishTime) players[data.id].finishTime = data.time;
-                }
-            }
-        }
-
-        function handleClientData(data) {
-            if (data.type === 'update_players') { players = data.players; updatePlayerList(); }
-            if (data.type === 'start_game' || data.type === 'rematch') { 
-                candlesticks = data.candles; maPoints = data.ma; volumes = data.vols;
-                if (data.type === 'start_game') startGame(); else prepareRematch();
-            }
-            if (data.type === 'sync_all') {
-                for (let id in data.players) {
-                    if (id !== myId && players[id]) {
-                        players[id].x = data.players[id].x; players[id].y = data.players[id].y; 
-                        players[id].rot = data.players[id].rot; players[id].crashed = data.players[id].crashed;
-                        players[id].finished = data.players[id].finished; players[id].finishTime = data.players[id].finishTime;
-                        players[id].memeFrozen = data.players[id].memeFrozen; players[id].memeTxt = data.players[id].memeTxt;
-                    }
-                }
-            }
-        }
-
-        function updatePlayerList() {
-            UI.playerList.innerHTML = '';
-            for (let id in players) {
-                const li = document.createElement('li');
-                li.innerHTML = `<span style="color:${players[id].color}">■</span> ${players[id].name} ${id===myId?'(你)':''}`;
-                UI.playerList.appendChild(li);
-            }
-        }
-
-        function startGame() {
-            UI.container.classList.remove('bg-[#ffffff]', 'bg-opacity-95');
-            UI.container.classList.add('pointer-events-none', 'bg-transparent');
-            UI.lobby.classList.add('hidden'); UI.result.classList.add('hidden'); UI.hud.classList.remove('hidden');
-            resetBike(); resizeCanvas(); startTime = Date.now();
-            
-            const pressGas = (e) => { if(e) e.preventDefault(); bike.isGasBtnDown = true; };
-            const releaseGas = (e) => { if(e) e.preventDefault(); bike.isGasBtnDown = false; };
-            
-            UI.btnGas.ontouchstart = pressGas; UI.btnGas.ontouchend = releaseGas;
-            UI.btnGas.onmousedown = pressGas; window.onmouseup = releaseGas;
-            window.onkeydown = (e) => { if(e.key === ' ' || e.key === 'ArrowRight') pressGas(); };
-            window.onkeyup = (e) => { if(e.key === ' ' || e.key === 'ArrowRight') releaseGas(); };
-            
-            requestAnimationFrame(gameLoop);
-        }
-
-        function prepareRematch() {
-            for(let id in players) { players[id].finished = false; players[id].finishTime = 0; }
-            startGame();
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        function resizeCanvas() { UI.canvas.width = window.innerWidth; UI.canvas.height = window.innerHeight; }
-
-        function updatePhysics(dt) {
-            if (bike.finished) return;
-            let dtMultiplier = dt * 60; 
-
-            // 迷因發作：突然煞車並大喊 (保證發作)
-            if (bike.memeTriggerXs.length > 0 && bike.x > bike.memeTriggerXs[0]) {
-                bike.memeTriggerXs.shift(); // 移除已經發作過的點
-                bike.isMemeFrozen = true;
-                bike.memeTimer = 1.5; // 定格 1.5 秒
-                bike.memeText = memeQuotes[Math.floor(Math.random() * memeQuotes.length)];
-                bike.vx = 0; bike.vy = 0;
-            }
-
-            if (bike.isMemeFrozen) {
-                bike.memeTimer -= dt;
-                if (bike.memeTimer <= 0) bike.isMemeFrozen = false;
-                return; // 定格期間跳過物理運算
-            }
-
-            if (bike.isCrashed) {
-                bike.crashTimer -= dt;
-                let trackA = getTrackData(bike.x).angle;
-                bike.angle += (trackA - bike.angle) * 0.05 * dtMultiplier;
-                if (bike.crashTimer <= 0) {
-                    bike.isCrashed = false;
-                    document.getElementById('crash-warning').classList.add('hidden');
-                }
-            } else {
-                bike.vy += 0.5 * dtMultiplier; // 重力
-                let trackInfo = getTrackData(bike.x);
-
-                if (!bike.isAirborne && bike.isGasBtnDown) {
-                    let accel = 0.55 * dtMultiplier;
-                    bike.vx += accel * Math.cos(trackInfo.angle);
-                    bike.vy += accel * Math.sin(trackInfo.angle);
-                }
-
-                bike.x += bike.vx * dtMultiplier;
-                bike.y += bike.vy * dtMultiplier;
-
-                let newTrackInfo = getTrackData(bike.x);
-                if (bike.y >= newTrackInfo.y) {
-                    if (bike.isAirborne) {
-                        let nAngle = Math.atan2(Math.sin(bike.angle), Math.cos(bike.angle));
-                        let nTrackAngle = Math.atan2(Math.sin(newTrackInfo.angle), Math.cos(newTrackInfo.angle));
-                        let diff = Math.abs(nAngle - nTrackAngle);
-                        if (diff > Math.PI) diff = 2 * Math.PI - diff; 
-                        
-                        // 跌倒判定 (大於 35度)
-                        if (diff > 0.6) {
-                            bike.isCrashed = true;
-                            bike.crashTimer = 1.0; 
-                            bike.vx *= 0.1; bike.vy = 0;
-                            document.getElementById('crash-warning').classList.remove('hidden');
-                        }
-                    }
-
-                    if (!bike.isCrashed) {
-                        bike.isAirborne = false;
-                        bike.y = newTrackInfo.y;
-                        bike.angle = newTrackInfo.angle; 
-
-                        let speedAlongTrack = bike.vx * Math.cos(newTrackInfo.angle) + bike.vy * Math.sin(newTrackInfo.angle);
-                        speedAlongTrack *= Math.pow(0.99, dtMultiplier); 
-                        if (!bike.isGasBtnDown) speedAlongTrack *= Math.pow(0.95, dtMultiplier); 
-
-                        // 最高速限限制為 18
-                        if (speedAlongTrack > 18) speedAlongTrack = 18;
-                        if (speedAlongTrack < -3) speedAlongTrack = -3;
-
-                        bike.vx = speedAlongTrack * Math.cos(newTrackInfo.angle);
-                        bike.vy = speedAlongTrack * Math.sin(newTrackInfo.angle);
-                    }
-                } else {
-                    if (!bike.isAirborne) bike.spinSpeed = bike.vx * 0.005; 
-                    bike.isAirborne = true;
-                    // 在空中死按著油門會瘋狂前空翻
-                    if (bike.isGasBtnDown) bike.spinSpeed += 0.003 * dtMultiplier;
-                    bike.angle += bike.spinSpeed * dtMultiplier;
-                }
-            }
-
-            const progress = Math.min(100, Math.floor((bike.x / trackLength) * 100));
-            document.getElementById('hud-dist').textContent = `${progress}%`;
-            
-            let currentCandle = candlesticks.find(c => c.x >= bike.x);
-            if(currentCandle && Math.floor(Date.now() / 200) % 2 === 0) {
-                UI.tvO.textContent = currentCandle.open.toFixed(2); UI.tvH.textContent = currentCandle.high.toFixed(2);
-                UI.tvL.textContent = currentCandle.low.toFixed(2);
-                UI.tvC.textContent = (currentCandle.close + (Math.random()-0.5)*2).toFixed(2);
-                UI.tvC.className = currentCandle.close >= currentCandle.open ? 'text-[#089981]' : 'text-[#f23645]';
-            }
-        }
-
-        function drawTradingViewChart() {
-            // 平滑更新世界相機 (鎖定玩家為中心稍微偏左)
-            let targetCamX = bike.x - (UI.canvas.width * 0.3) / cameraZoom;
-            let targetCamY = bike.y - (UI.canvas.height * 0.4) / cameraZoom;
-            // 防止相機超出起點
-            if (targetCamX < 0) targetCamX = 0; 
-
-            camera.x += (targetCamX - camera.x) * 0.1;
-            camera.y += (targetCamY - camera.y) * 0.1;
-
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, UI.canvas.width, UI.canvas.height);
-            
-            ctx.save();
-            ctx.scale(cameraZoom, cameraZoom);
-            ctx.translate(-camera.x, -camera.y); // 將畫布移動到世界相機位置
-
-            // 1. 繪製絕對靜止的背景網格 (根據相機視角)
-            ctx.strokeStyle = '#f0f3fa'; ctx.lineWidth = 1 / cameraZoom;
-            const left = camera.x, right = camera.x + UI.canvas.width / cameraZoom;
-            const top = camera.y, bottom = camera.y + UI.canvas.height / cameraZoom;
-            
-            for(let i = Math.floor(left/150)*150; i < right; i+=150) { ctx.beginPath(); ctx.moveTo(i, top); ctx.lineTo(i, bottom); ctx.stroke(); }
-            for(let j = Math.floor(top/80)*80; j < bottom; j+=80) { ctx.beginPath(); ctx.moveTo(left, j); ctx.lineTo(right, j); ctx.stroke(); }
-            
-            // 2. 浮水印
-            ctx.fillStyle = 'rgba(240, 243, 250, 0.8)';
-            ctx.font = 'bold 200px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText("TSLA", left + (right - left)/2, top + (bottom - top)/2);
-
-            // 3. 繪製底部成交量與 K 線
-            candlesticks.forEach((c, idx) => {
-                if (c.x > left - 100 && c.x < right + 100) {
-                    const isUp = c.close >= c.open;
-                    const color = isUp ? '#089981' : '#f23645'; 
-                    const vHeight = volumes[idx] * 0.5;
-                    ctx.fillStyle = isUp ? 'rgba(8, 153, 129, 0.3)' : 'rgba(242, 54, 69, 0.3)';
-                    ctx.fillRect(c.x - 6, 1100 - vHeight, 12, vHeight); // 量
-                    
-                    ctx.strokeStyle = color; ctx.lineWidth = 2;
-                    ctx.beginPath(); ctx.moveTo(c.x, 700 - c.high); ctx.lineTo(c.x, 700 - c.low); ctx.stroke(); // 影線
-                    
-                    ctx.fillStyle = color;
-                    let bodyTop = 700 - Math.max(c.open, c.close);
-                    let bodyHeight = Math.max(2, Math.abs(c.close - c.open));
-                    ctx.fillRect(c.x - 12, bodyTop, 24, bodyHeight); // 實體
-                }
-            });
-
-            // 4. 繪製 5 日均線賽道
-            ctx.beginPath(); ctx.lineWidth = 8; ctx.lineJoin = "round";
-            for (let i = 0; i < maPoints.length - 1; i++) {
-                if (maPoints[i].x > left - 200 && maPoints[i].x < right + 200) {
-                    if(i === 0 || maPoints[i-1].x <= left - 200) ctx.moveTo(maPoints[i].x, maPoints[i].y);
-                    ctx.lineTo(maPoints[i+1].x, maPoints[i+1].y);
-                }
-            }
-            ctx.strokeStyle = '#2962ff'; ctx.shadowColor = 'rgba(41, 98, 255, 0.4)'; ctx.shadowBlur = 15;
-            ctx.stroke(); ctx.shadowBlur = 0;
-            
-            // 5. 畫終點紅旗
-            if (trackLength > left && trackLength < right + 500) {
-                const finishY = maPoints[maPoints.length-1].y;
-                ctx.fillStyle = '#787b86'; ctx.fillRect(trackLength, finishY - 200, 6, 200); // 旗桿
-                ctx.fillStyle = '#f23645'; 
-                ctx.beginPath(); ctx.moveTo(trackLength + 6, finishY - 190); ctx.lineTo(trackLength + 80, finishY - 160); ctx.lineTo(trackLength + 6, finishY - 130); ctx.fill(); // 紅旗
-                ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillText('FINISH', trackLength + 12, finishY - 155);
-            }
-            ctx.restore();
-
-            // 6. UI 層: 底部日期 X 軸
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, UI.canvas.height - 30, UI.canvas.width, 30);
-            ctx.strokeStyle = '#e0e3eb'; ctx.beginPath(); ctx.moveTo(0, UI.canvas.height - 30); ctx.lineTo(UI.canvas.width, UI.canvas.height - 30); ctx.stroke();
-            
-            ctx.fillStyle = '#787b86'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            let lastMonth = ""; 
-            candlesticks.forEach(c => {
-                const screenX = (c.x - camera.x) * cameraZoom;
-                if (screenX > 0 && screenX < UI.canvas.width) {
-                    const monthKey = c.date.substring(0, 7); // YYYY-MM
-                    if (monthKey !== lastMonth) {
-                        ctx.beginPath(); ctx.moveTo(screenX, UI.canvas.height - 30); ctx.lineTo(screenX, UI.canvas.height - 25); ctx.stroke();
-                        ctx.fillText(monthKey.replace('-', '年') + '月', screenX, UI.canvas.height - 15);
-                        lastMonth = monthKey;
-                    }
-                }
-            });
-
-            // 7. UI 層: 右側價格 Y 軸
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(UI.canvas.width - 60, 50, 60, UI.canvas.height - 80);
-            ctx.strokeStyle = '#e0e3eb'; ctx.beginPath(); ctx.moveTo(UI.canvas.width - 60, 50); ctx.lineTo(UI.canvas.width - 60, UI.canvas.height - 30); ctx.stroke();
-            ctx.fillStyle = '#131722'; ctx.font = '11px Arial'; ctx.textAlign = 'right';
-            for(let j=0; j<UI.canvas.height; j+=80) {
-                let simPrice = (700 - (camera.y + (j - 50) / cameraZoom)).toFixed(1);
-                ctx.fillText(simPrice, UI.canvas.width - 8, j + 4 + 50);
-            }
-        }
-
+<!-- ... existing code ... -->
         function drawBicycle(x, y, angle, color, name, isCrashed, isFrozen, memeTxt) {
             ctx.save();
             ctx.scale(cameraZoom, cameraZoom);
@@ -649,41 +7,74 @@
             // 繪製迷因對話框 (不受旋轉影響)
             if (isFrozen && memeTxt) {
                 ctx.save();
-                ctx.translate(0, -100);
-                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#131722'; ctx.lineWidth = 3;
-                ctx.beginPath(); ctx.roundRect(-100, -50, 200, 45, 10); ctx.fill(); ctx.stroke(); // 泡泡
-                ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(0, 15); ctx.lineTo(15, -5); ctx.fill(); ctx.stroke(); // 尾巴
-                ctx.fillStyle = '#f23645'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(memeTxt, 0, -28);
+                ctx.translate(0, -170); // 往上移避免擋到名字和車子
+                
+                ctx.font = '900 48px sans-serif'; // 字體大三倍 (16px -> 48px)
+                let tw = ctx.measureText(memeTxt).width;
+                let bw = tw + 60;
+                let bh = 80;
+                
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#131722'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.roundRect(-bw/2, -bh/2, bw, bh, 15); ctx.fill(); ctx.stroke(); // 泡泡
+                ctx.beginPath(); ctx.moveTo(-15, bh/2); ctx.lineTo(0, bh/2 + 25); ctx.lineTo(15, bh/2); ctx.fill(); ctx.stroke(); // 尾巴
+                
+                ctx.fillStyle = '#f23645'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(memeTxt, 0, 0);
                 ctx.restore();
             }
 
             ctx.rotate(angle);
 
-            // 名字 ID (所有人都顯示名字)
+            // 名字 ID (往上移，避免跟頭重疊)
             ctx.fillStyle = color; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText(name, 0, -60);
+            ctx.fillText(name, 0, -90); // 從 -60 改為 -90
 
             // 車身
-            ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-            ctx.beginPath(); ctx.arc(-22, -10, 10, 0, Math.PI*2); ctx.stroke(); 
-            ctx.beginPath(); ctx.arc(22, -10, 10, 0, Math.PI*2); ctx.stroke(); 
-            ctx.beginPath(); ctx.moveTo(-22, -10); ctx.lineTo(-6, -30); ctx.lineTo(12, -30); ctx.lineTo(22, -10); 
-            ctx.moveTo(12, -30); ctx.lineTo(0, -10); ctx.lineTo(-22, -10); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(-10, -30); ctx.lineTo(-2, -30); ctx.lineWidth = 6; ctx.stroke(); 
-            ctx.beginPath(); ctx.moveTo(12, -30); ctx.lineTo(10, -40); ctx.lineTo(16, -40); ctx.lineWidth = 5; ctx.stroke(); 
+<!-- ... existing code ... -->
+        function updatePhysics(dt) {
+            if (bike.finished) return;
+            let dtMultiplier = dt * 60; 
 
-            // 火柴人
-            ctx.strokeStyle = '#131722'; ctx.fillStyle = '#131722'; ctx.lineWidth = 5;
-            if (isCrashed) { ctx.translate(10, -15); ctx.rotate(Math.PI / 2); }
-            ctx.beginPath(); ctx.arc(0, -55, 7, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.moveTo(0, -48); ctx.lineTo(-4, -30); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, -42); ctx.lineTo(12, -40); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(-4, -30); ctx.lineTo(0, -20); ctx.lineTo(0, -10); ctx.stroke();
+            // 迷因發作：突然煞車並大喊 (保證發作)
+            if (bike.memeTriggerXs.length > 0 && bike.x > bike.memeTriggerXs[0]) {
+                bike.memeTriggerXs.shift(); // 移除已經發作過的點
+                bike.isMemeFrozen = true;
+                bike.memeTimer = 4.5; // 定格時間增加三倍 (1.5 -> 4.5 秒)
+                bike.memeText = memeQuotes[Math.floor(Math.random() * memeQuotes.length)];
+                bike.vx = 0; bike.vy = 0;
+                
+                // 真實人聲語音播報 (TTS)
+                if ('speechSynthesis' in window) {
+                    let msg = new SpeechSynthesisUtterance(bike.memeText);
+                    msg.lang = 'en-US'; // 英文發音
+                    msg.rate = 1.1; // 稍微快一點比較激動
+                    msg.pitch = Math.random() * 0.6 + 0.8; // 隨機音調增加趣味
+                    window.speechSynthesis.speak(msg);
+                }
+            }
 
-            ctx.restore();
-        }
+            if (bike.isMemeFrozen) {
+                bike.memeTimer -= dt;
+<!-- ... existing code ... -->
+                if (!bike.isAirborne && bike.isGasBtnDown) {
+                    let accel = 0.66 * dtMultiplier; // 車速(加速度)變快 20%
+                    bike.vx += accel * Math.cos(trackInfo.angle);
+                    bike.vy += accel * Math.sin(trackInfo.angle);
+                }
 
+                bike.x += bike.vx * dtMultiplier;
+                bike.y += bike.vy * dtMultiplier;
+<!-- ... existing code ... -->
+                        let speedAlongTrack = bike.vx * Math.cos(newTrackInfo.angle) + bike.vy * Math.sin(newTrackInfo.angle);
+                        speedAlongTrack *= Math.pow(0.99, dtMultiplier); 
+                        if (!bike.isGasBtnDown) speedAlongTrack *= Math.pow(0.95, dtMultiplier); 
+
+                        // 最高速限限制加快 20% (18 -> 21.6)
+                        if (speedAlongTrack > 21.6) speedAlongTrack = 21.6;
+                        if (speedAlongTrack < -3.6) speedAlongTrack = -3.6;
+
+                        bike.vx = speedAlongTrack * Math.cos(newTrackInfo.angle);
+<!-- ... existing code ... -->
         function gameLoop(timestamp) {
             if (!lastTime) lastTime = timestamp;
             let dt = (timestamp - lastTime) / 1000;
@@ -696,62 +87,23 @@
             for (let id in players) {
                 if (id !== myId) {
                     const p = players[id];
+                    
+                    // 讓其他連線對手的迷因也能發出人聲
+                    if (p.memeFrozen && p.memeTxt && !p.hasSpoken) {
+                        if ('speechSynthesis' in window) {
+                            let msg = new SpeechSynthesisUtterance(p.memeTxt);
+                            msg.lang = 'en-US'; msg.rate = 1.1;
+                            window.speechSynthesis.speak(msg);
+                        }
+                        p.hasSpoken = true;
+                    } else if (!p.memeFrozen) {
+                        p.hasSpoken = false; // 沒發作時重置
+                    }
+                    
                     drawBicycle(p.x, p.y, p.rot, p.color, p.name, p.crashed, p.memeFrozen, p.memeTxt);
                 }
             }
             drawBicycle(bike.x, bike.y, bike.angle, myColor, myName, bike.isCrashed, bike.isMemeFrozen, bike.memeText);
 
             syncNetwork(); checkFinish();
-            if (!bike.finished || isHost) gameLoopId = requestAnimationFrame(gameLoop);
-        }
-
-        function syncNetwork() {
-            if (Math.floor(Date.now() / 50) % 2 === 0) {
-                const myState = { type: 'sync', id: myId, x: bike.x, y: bike.y, rot: bike.angle, crashed: bike.isCrashed, finished: bike.finished, time: bike.finishTime, memeFrozen: bike.isMemeFrozen, memeTxt: bike.memeText };
-                if (isHost) {
-                    players[myId].x = bike.x; players[myId].y = bike.y; players[myId].rot = bike.angle; 
-                    players[myId].crashed = bike.isCrashed; players[myId].finished = bike.finished;
-                    players[myId].memeFrozen = bike.isMemeFrozen; players[myId].memeTxt = bike.memeText;
-                    if(bike.finished && !players[myId].finishTime) players[myId].finishTime = bike.finishTime;
-                    connections.forEach(c => c.send({ type: 'sync_all', players: players }));
-                } else {
-                    if (hostConnection && hostConnection.open) hostConnection.send(myState);
-                }
-            }
-        }
-
-        function checkFinish() {
-            if (!bike.finished && bike.x >= trackLength) {
-                bike.finished = true; bike.finishTime = Date.now() - startTime;
-                setTimeout(checkAllFinished, 1000);
-            }
-        }
-
-        function checkAllFinished() {
-            let allDone = true, results = [];
-            for (let id in players) {
-                if (!players[id].finished) allDone = false;
-                else results.push({ name: players[id].name, time: players[id].finishTime });
-            }
-
-            if (allDone && results.length > 0) {
-                cancelAnimationFrame(gameLoopId);
-                UI.hud.classList.add('hidden'); UI.container.classList.remove('pointer-events-none', 'bg-transparent'); UI.container.classList.add('bg-[#ffffff]', 'bg-opacity-90'); UI.result.classList.remove('hidden');
-                if (isHost) { UI.btnRematch.classList.remove('hidden'); UI.btnWaitRematch.classList.add('hidden'); } 
-                else { UI.btnRematch.classList.add('hidden'); UI.btnWaitRematch.classList.remove('hidden'); }
-
-                results.sort((a, b) => a.time - b.time);
-                UI.board.innerHTML = '';
-                results.forEach((r, index) => {
-                    const isLoser = index === results.length - 1;
-                    const el = document.createElement('div');
-                    el.className = `flex justify-between p-3 rounded font-bold ${isLoser ? 'bg-[#fff0f0] text-[#f23645]' : 'bg-white text-[#131722]'}`;
-                    el.innerHTML = `<span>#${index + 1} ${r.name}</span> <span class="font-mono">${(r.time / 1000).toFixed(2)}s</span>`;
-                    UI.board.appendChild(el);
-                    if (isLoser) UI.loserName.textContent = r.name;
-                });
-            } else if (bike.finished) setTimeout(checkAllFinished, 1000); 
-        }
-    </script>
-</body>
-</html>
+<!-- ... existing code ... -->
