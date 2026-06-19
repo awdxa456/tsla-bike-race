@@ -3,24 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TradingView 飆股單車賽</title>
+    <title>Stock Bicycle Race</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
-        /* TradingView Light Theme 專屬設定 */
         body { margin: 0; overflow: hidden; background-color: #ffffff; color: #131722; font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif; touch-action: none; user-select: none; }
         canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* UI 層次設定 */
         .ui-layer { position: absolute; z-index: 10; pointer-events: none; }
         .interactive { pointer-events: auto; }
         .hidden { display: none !important; }
         
-        /* 輸入框與按鈕 */
         input, select { background-color: #f0f3fa; border: 1px solid #d1d4dc; color: #131722; outline: none; transition: border 0.2s; }
         input:focus, select:focus { border-color: #2962ff; }
         
-        /* 油門按鈕 */
         .control-btn {
             background: #ffffff; border: 2px solid #2962ff; color: #2962ff;
             border-radius: 50%; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center;
@@ -28,7 +24,6 @@
         }
         .control-btn:active { background: #2962ff; color: #ffffff; transform: scale(0.9); }
 
-        /* 左側與上方工具列風格 */
         .tv-toolbar { background-color: #ffffff; border-color: #e0e3eb; }
         .tv-icon { width: 24px; height: 24px; fill: #787b86; cursor: pointer; transition: fill 0.2s; }
         .tv-icon:hover { fill: #131722; }
@@ -39,7 +34,6 @@
     <!-- TradingView 上方工具列 -->
     <div class="ui-layer interactive w-full h-[50px] tv-toolbar border-b flex items-center px-4 justify-between z-20">
         <div class="flex items-center space-x-4">
-            <!-- TSLA Logo & Name -->
             <div class="flex items-center space-x-2 cursor-pointer">
                 <div class="w-7 h-7 bg-[#e21c31] rounded-full flex items-center justify-center text-white font-bold text-[16px] leading-none pb-[2px]">T</div>
                 <span class="font-black text-lg text-[#131722] tracking-wide" id="tv-ticker">TSLA</span>
@@ -51,7 +45,6 @@
                 <span class="hover:text-[#131722] cursor-pointer">1M</span>
             </div>
             <div class="h-6 w-px bg-[#e0e3eb] hidden md:block"></div>
-            <!-- 指標等圖示 -->
             <div class="hidden md:flex space-x-3">
                 <svg class="tv-icon" viewBox="0 0 28 28"><path d="M12 14.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm-2.5-1.5a2.5 2.5 0 1 1 5 0 2.5 2.5 0 0 1-5 0zM15 8h4v1h-4V8zm0 11h4v1h-4v-1zm-6-5h4v1H9v-1z" fill-rule="evenodd"/></svg>
                 <span class="text-sm font-semibold text-[#787b86] hover:text-[#131722] cursor-pointer pt-0.5">技術指標</span>
@@ -68,7 +61,6 @@
 
     <!-- TradingView 左側繪圖工具列 -->
     <div class="ui-layer interactive w-[50px] h-full pt-[50px] tv-toolbar border-r flex flex-col items-center py-4 space-y-5 z-10 hidden sm:flex">
-        <!-- 模擬 TradingView 的各類工具圖示 -->
         <svg class="tv-icon" viewBox="0 0 28 28"><path d="M14 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-1 6a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm1 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
         <svg class="tv-icon" viewBox="0 0 28 28"><path d="M7 14.5A1.5 1.5 0 1 1 7 11.5a1.5 1.5 0 0 1 0 3zm14 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM8.33 12h11.34v1H8.33v-1z"/></svg>
         <svg class="tv-icon" viewBox="0 0 28 28"><path d="M10 8h2v1h-2V8zm0 4h6v1h-6v-1zm0 4h8v1h-8v-1z"/></svg>
@@ -79,49 +71,38 @@
         <svg class="tv-icon" viewBox="0 0 28 28"><path d="M9 10h10v1H9v-1zm0 4h10v1H9v-1z"/></svg>
     </div>
 
-    <!-- 遊戲畫布 -->
     <canvas id="gameCanvas"></canvas>
 
     <!-- UI 大廳與互動層 -->
     <div id="ui-container" class="ui-layer interactive w-full h-full flex flex-col items-center justify-center p-4 z-30 bg-[#ffffff] bg-opacity-95">
         
-        <!-- 警告提示 -->
         <div id="custom-alert" class="hidden fixed top-[70px] bg-[#f23645] text-white px-6 py-3 rounded shadow-lg z-50 font-bold tracking-wide">
             ⚠️ <span id="alert-text">提示</span>
         </div>
 
-        <!-- 1. 大廳畫面 -->
         <div id="lobby-screen" class="bg-white p-8 rounded-xl shadow-[0_10px_30px_rgba(19,23,34,0.1)] border border-[#e0e3eb] max-w-md w-full text-center">
-            <h1 class="text-3xl font-black mb-1 text-[#131722] tracking-tight">飆股單車極限賽</h1>
-            <p class="text-[#787b86] mb-8 text-sm font-semibold">看懂五日均線，別在懸崖邊翻車！</p>
+            <h1 class="text-3xl font-black mb-1 text-[#131722] tracking-tight">Stock Bicycle Race</h1>
+            <p class="text-[#787b86] mb-8 text-sm font-semibold">控制速度，別在崩盤時跌倒！</p>
             
-            <input type="text" id="playerName" placeholder="輸入車手名稱" class="w-full p-3 mb-6 rounded text-center text-lg font-bold" maxlength="8">
+            <input type="text" id="playerName" placeholder="輸入你的 ID" class="w-full p-3 mb-6 rounded text-center text-lg font-bold" maxlength="10">
             
             <div id="join-options" class="flex flex-col gap-4">
-                <!-- 建立房間 -->
                 <div class="bg-[#f8f9fd] p-4 rounded border border-[#e0e3eb]">
-                    <h3 class="text-sm text-[#131722] mb-3 font-bold text-left">當莊家 (建立派對)</h3>
+                    <h3 class="text-sm text-[#131722] mb-3 font-bold text-left">建立派對 (莊家)</h3>
                     <div class="flex gap-2 mb-3">
-                        <input type="text" id="customRoomId" placeholder="自訂房號 (選填)" class="w-1/2 p-2 rounded text-center text-sm font-mono">
-                        <select id="stockSelect" class="w-1/2 p-2 rounded text-sm font-bold text-[#2962ff]">
-                            <option value="TSLA">TSLA (極限陡坡)</option>
-                            <option value="NVDA">NVDA (穩步爬升)</option>
-                            <option value="GME">GME (死魚大怒神)</option>
-                        </select>
+                        <input type="text" id="customRoomId" placeholder="自訂好記房號" class="w-full p-2 rounded text-center text-sm font-mono font-bold">
                     </div>
                     <button id="btnCreateRoom" class="w-full py-2.5 bg-[#2962ff] hover:bg-[#1e4bd8] rounded font-bold text-white transition shadow-md">建立賽道</button>
                 </div>
                 
                 <div class="flex items-center gap-2"><hr class="flex-grow border-[#e0e3eb]"><span class="text-[#b2b5be] text-xs font-bold">OR</span><hr class="flex-grow border-[#e0e3eb]"></div>
                 
-                <!-- 加入房間 -->
                 <div class="flex gap-2">
                     <input type="text" id="roomIdInput" placeholder="輸入朋友房號" class="w-2/3 p-3 rounded text-center font-mono font-bold">
                     <button id="btnJoinRoom" class="w-1/3 bg-[#089981] hover:bg-[#067a67] rounded text-white font-bold transition shadow-md">加入</button>
                 </div>
             </div>
 
-            <!-- 等待畫面 -->
             <div id="room-waiting" class="hidden flex-col items-center mt-2">
                 <div class="flex justify-between items-center w-full bg-[#f8f9fd] p-3 rounded border border-[#e0e3eb] mb-4">
                     <div class="text-left">
@@ -140,168 +121,120 @@
             </div>
         </div>
 
-        <!-- 2. 遊戲內控制層 -->
         <div id="game-hud" class="hidden w-full h-full flex-col justify-between pointer-events-none absolute top-0 left-0">
-            <!-- 頂部資訊列 (避開 TV Toolbar) -->
             <div class="mt-[60px] ml-[60px] mr-4 flex justify-between items-start pointer-events-auto">
                 <div class="bg-white p-2 px-3 rounded text-sm font-mono border border-[#e0e3eb] shadow-md">
                     <div class="text-[#787b86] font-bold">賽道完成度</div>
                     <div id="hud-dist" class="text-[#2962ff] font-black text-lg">0%</div>
                 </div>
 
-                <!-- 翻車提示 -->
                 <div id="crash-warning" class="hidden bg-[#f23645] text-white px-5 py-2 rounded-full font-black animate-bounce shadow-lg">
                     💥 跌倒！(爬起中...)
                 </div>
             </div>
             
-            <!-- 底部操作區 -->
             <div class="flex justify-between items-end pb-8 px-8 pointer-events-auto w-full">
                 <div></div>
-                <div>
-                    <button id="btnGas" class="control-btn">GO</button>
-                </div>
+                <div><button id="btnGas" class="control-btn">GO</button></div>
             </div>
         </div>
 
-        <!-- 3. 結算畫面 -->
         <div id="result-screen" class="hidden bg-white p-8 rounded-xl shadow-[0_10px_30px_rgba(19,23,34,0.15)] border border-[#e0e3eb] max-w-md w-full text-center">
             <h1 class="text-3xl font-black mb-6 text-[#131722] tracking-tight">收盤結算</h1>
-            <div id="leaderboard" class="w-full bg-[#f8f9fd] rounded p-4 mb-6 text-left space-y-2 border border-[#e0e3eb]">
-                <!-- 榜單 -->
-            </div>
+            <div id="leaderboard" class="w-full bg-[#f8f9fd] rounded p-4 mb-6 text-left space-y-2 border border-[#e0e3eb]"></div>
             <div id="loser-pays" class="bg-[#fff0f0] border-2 border-[#f23645] p-5 rounded-lg mb-6 shadow-sm">
                 <h2 class="text-xl font-bold text-[#f23645]">🚨 韭菜買單 🚨</h2>
                 <p id="loserName" class="text-3xl font-black text-[#131722] mt-2">某某某</p>
                 <p class="text-sm text-[#f23645] mt-1 font-bold">今晚火鍋你請客！</p>
             </div>
             <div class="flex gap-3">
-                <button id="btnRematch" class="w-full py-3 bg-[#2962ff] hover:bg-[#1e4bd8] text-white rounded font-bold transition shadow-md hidden">🔄 再軋一局</button>
+                <button id="btnRematch" class="w-full py-3 bg-[#2962ff] hover:bg-[#1e4bd8] text-white rounded font-bold transition shadow-md hidden">🔄 再戰一局</button>
                 <button id="btnWaitRematch" class="w-full py-3 bg-[#f0f3fa] text-[#787b86] rounded font-bold cursor-not-allowed hidden">等待莊家重開...</button>
             </div>
         </div>
     </div>
 
     <script>
-        // UI 綁定
         const UI = {
-            nameInput: document.getElementById('playerName'),
-            roomIdInput: document.getElementById('roomIdInput'),
-            customRoomId: document.getElementById('customRoomId'),
-            stockSelect: document.getElementById('stockSelect'),
-            container: document.getElementById('ui-container'),
-            lobby: document.getElementById('lobby-screen'),
-            joinOptions: document.getElementById('join-options'),
-            waiting: document.getElementById('room-waiting'),
-            displayId: document.getElementById('displayRoomId'),
-            playerList: document.getElementById('playerList'),
-            btnStart: document.getElementById('btnStartGame'),
-            btnCopyLink: document.getElementById('btnCopyLink'),
-            waitingText: document.getElementById('waitingText'),
-            canvas: document.getElementById('gameCanvas'),
-            hud: document.getElementById('game-hud'),
-            btnGas: document.getElementById('btnGas'),
-            result: document.getElementById('result-screen'),
-            board: document.getElementById('leaderboard'),
-            loserName: document.getElementById('loserName'),
-            btnRematch: document.getElementById('btnRematch'),
-            btnWaitRematch: document.getElementById('btnWaitRematch'),
-            tvO: document.getElementById('tv-o'), tvH: document.getElementById('tv-h'),
-            tvL: document.getElementById('tv-l'), tvC: document.getElementById('tv-c'),
-            tvTicker: document.getElementById('tv-ticker')
+            nameInput: document.getElementById('playerName'), roomIdInput: document.getElementById('roomIdInput'),
+            customRoomId: document.getElementById('customRoomId'), container: document.getElementById('ui-container'),
+            lobby: document.getElementById('lobby-screen'), joinOptions: document.getElementById('join-options'),
+            waiting: document.getElementById('room-waiting'), displayId: document.getElementById('displayRoomId'),
+            playerList: document.getElementById('playerList'), btnStart: document.getElementById('btnStartGame'),
+            btnCopyLink: document.getElementById('btnCopyLink'), waitingText: document.getElementById('waitingText'),
+            canvas: document.getElementById('gameCanvas'), hud: document.getElementById('game-hud'),
+            btnGas: document.getElementById('btnGas'), result: document.getElementById('result-screen'),
+            board: document.getElementById('leaderboard'), loserName: document.getElementById('loserName'),
+            btnRematch: document.getElementById('btnRematch'), btnWaitRematch: document.getElementById('btnWaitRematch'),
+            tvO: document.getElementById('tv-o'), tvH: document.getElementById('tv-h'), tvL: document.getElementById('tv-l'), tvC: document.getElementById('tv-c')
         };
         const ctx = UI.canvas.getContext('2d');
 
         function showWarning(msg) {
-            const box = document.getElementById('custom-alert');
-            document.getElementById('alert-text').textContent = msg;
-            box.classList.remove('hidden');
-            setTimeout(() => box.classList.add('hidden'), 3000);
+            const box = document.getElementById('custom-alert'); document.getElementById('alert-text').textContent = msg;
+            box.classList.remove('hidden'); setTimeout(() => box.classList.add('hidden'), 3000);
         }
 
-        // URL 參數處理
         const urlParams = new URLSearchParams(window.location.search);
-        const urlRoom = urlParams.get('room');
-        if (urlRoom) {
-            UI.roomIdInput.value = urlRoom;
-            showWarning("已自動填入邀請房號！");
-        }
+        if (urlParams.get('room')) { UI.roomIdInput.value = urlParams.get('room'); }
 
-        // 系統與連線變數
         let myName = localStorage.getItem('playerName') || "";
         UI.nameInput.value = myName;
         
-        let peer = null, isHost = false, myId = null, currentStock = 'TSLA';
+        let peer = null, isHost = false, myId = null;
         let connections = [], hostConnection = null, players = {};
         let gameLoopId = null, lastTime = 0;
         
-        // 腳踏車專屬顏色 (更鮮豔以便在明亮背景看清)
         const myColor = ["#2962ff", "#f23645", "#089981", "#ff9800", "#9c27b0", "#e91e63"][Math.floor(Math.random()*6)];
-
-        // K線與均線地圖生成系統
-        const trackLength = 15000; // 延長賽道
-        let candlesticks = []; 
-        let maPoints = []; // 均線軌跡 (實際碰撞體)
-        let volumes = [];
         
-        function generateMap(type) {
+        // 迷因金句資料庫
+        const memeQuotes = [
+            "F**k, give my money back!!", "Where is my Lambo?!", "Buy the dip they said...",
+            "Diamond hands! 💎🙌", "Margin called... 📉", "To the moon?! 🚀"
+        ];
+
+        // 賽道資料
+        const trackLength = 15000;
+        let candlesticks = [], maPoints = [], volumes = [];
+        
+        // 攝影機物件 (相對於世界座標)
+        let camera = { x: 0, y: 0 };
+        const cameraZoom = 0.55;
+
+        function generateMap() {
             candlesticks = []; maPoints = []; volumes = [];
             let currentPrice = 300;
             const pointsCount = 180;
             const stepX = trackLength / pointsCount;
-            
-            // 加入起始日期，創造歷史共鳴感
             let currentDate = new Date('2024-01-01');
             
             for (let i = 0; i <= pointsCount; i++) {
                 let open = currentPrice;
-                let change = 0;
-                
-                // 各股票特色設定
-                if (type === 'TSLA') { 
-                    change = (Math.random() - 0.5) * 45;
-                    if (i === 30) change = -200; // 財報爛暴跌 (飛躍點)
-                    if (i === 70) change = 180;  // 推特利多暴噴
-                    if (i === 120) change = -150; // 再度跳水
-                } else if (type === 'NVDA') { 
-                    change = (Math.random() - 0.3) * 30; // 趨勢向上
-                    if(i % 20 === 0) change -= 80; // 偶爾洗盤
-                } else if (type === 'GME') { 
-                    change = (Math.random() - 0.5) * 15; // 死魚
-                    if (i > 130) change = 250; // 史詩級軋空
-                }
+                let change = (Math.random() - 0.5) * 45;
+                if (i === 30) change = -200; // 暴跌
+                if (i === 70) change = 180;  // 暴噴
+                if (i === 120) change = -150; 
                 
                 let close = open + change;
                 let high = Math.max(open, close) + Math.random() * 25;
                 let low = Math.min(open, close) - Math.random() * 25;
                 let vol = Math.random() * 100 + (Math.abs(change) > 100 ? 200 : 0);
                 
-                // 產生 K線日期
                 let dateStr = currentDate.toISOString().split('T')[0];
-                
                 candlesticks.push({ x: i * stepX, open, close, high, low, date: dateStr });
                 volumes.push(vol);
                 currentPrice = close;
-                
-                // 推進日期 (略過假日，簡單加 1~2天)
                 currentDate.setDate(currentDate.getDate() + 1 + Math.floor(Math.random() * 2));
             }
 
-            // 計算 5日均線 (MA5) 作為物理賽道
             for (let i = 0; i < candlesticks.length; i++) {
                 let sum = 0, count = 0;
-                for (let j = Math.max(0, i - 4); j <= i; j++) {
-                    sum += candlesticks[j].close;
-                    count++;
-                }
+                for (let j = Math.max(0, i - 4); j <= i; j++) { sum += candlesticks[j].close; count++; }
                 let ma = sum / count;
-                // 將價格轉換為 Canvas 座標 (Y軸反轉: 價格高 = Y小)
                 maPoints.push({ x: candlesticks[i].x, y: 700 - ma }); 
             }
-            UI.tvTicker.textContent = type;
         }
 
-        // 取得均線軌跡資料
         function getTrackData(x) {
             if (x <= 0) return { y: maPoints[0].y, angle: 0 };
             if (x >= trackLength) return { y: maPoints[maPoints.length-1].y, angle: 0 };
@@ -309,63 +242,55 @@
                 if (x >= maPoints[i].x && x < maPoints[i+1].x) {
                     const p1 = maPoints[i], p2 = maPoints[i+1];
                     const t = (x - p1.x) / (p2.x - p1.x);
-                    const y = p1.y + t * (p2.y - p1.y);
-                    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-                    return { y, angle };
+                    return { y: p1.y + t * (p2.y - p1.y), angle: Math.atan2(p2.y - p1.y, p2.x - p1.x) };
                 }
             }
             return { y: 0, angle: 0 };
         }
 
-        // 腳踏車物理與競技系統
         let bike = {
             x: 50, y: 0, vx: 0, vy: 0, angle: 0, 
-            isGasBtnDown: false, 
-            isAirborne: false, spinSpeed: 0,
+            isGasBtnDown: false, isAirborne: false, spinSpeed: 0,
             isCrashed: false, crashTimer: 0, 
-            finished: false, finishTime: 0
+            finished: false, finishTime: 0,
+            hasMeme: false, memeTriggerX: 0, isMemeFrozen: false, memeTimer: 0, memeText: ""
         };
         let startTime = 0;
 
         function resetBike() {
-            bike = { x: 50, y: maPoints[0]?.y || 0, vx: 0, vy: 0, angle: 0, isGasBtnDown: false, isAirborne: false, spinSpeed: 0, isCrashed: false, crashTimer: 0, finished: false, finishTime: 0 };
+            bike = { 
+                x: 50, y: maPoints[0]?.y || 0, vx: 0, vy: 0, angle: 0, 
+                isGasBtnDown: false, isAirborne: false, spinSpeed: 0, 
+                isCrashed: false, crashTimer: 0, finished: false, finishTime: 0,
+                // 30% 機率獲得崩潰迷因屬性
+                hasMeme: Math.random() < 0.3, 
+                memeTriggerX: trackLength * (0.3 + Math.random() * 0.4), // 隨機觸發點在 30%~70% 之間
+                isMemeFrozen: false, memeTimer: 0, memeText: ""
+            };
             lastTime = 0;
+            camera = { x: 0, y: bike.y - UI.canvas.height / 2 / cameraZoom }; // 重置相機
             document.getElementById('crash-warning').classList.add('hidden');
         }
 
-        // PeerJS 連線系統
         function setupPeerEvents(targetPeer) {
             targetPeer.on('open', (id) => {
                 myId = id;
-                players[myId] = { name: myName, x: 50, y: 0, rot: 0, color: myColor, finished: false, crashed: false };
+                players[myId] = { name: myName, x: 50, y: 0, rot: 0, color: myColor, finished: false, crashed: false, memeFrozen: false, memeTxt: "" };
                 updatePlayerList();
                 UI.displayId.textContent = id;
-                if(isHost) {
-                    UI.btnStart.classList.remove('hidden');
-                    UI.waitingText.classList.add('hidden');
-                }
-            });
-            targetPeer.on('error', (err) => {
-                showWarning("連線失敗，房號可能已被使用或無效！");
-                UI.lobby.classList.remove('hidden');
-                UI.waiting.classList.add('hidden');
+                if(isHost) { UI.btnStart.classList.remove('hidden'); UI.waitingText.classList.add('hidden'); }
             });
         }
 
         document.getElementById('btnCreateRoom').onclick = () => {
-            if (!UI.nameInput.value.trim()) return showWarning('請輸入車手名稱');
-            myName = UI.nameInput.value.trim();
-            localStorage.setItem('playerName', myName);
+            if (!UI.nameInput.value.trim()) return showWarning('請輸入你的 ID');
+            myName = UI.nameInput.value.trim(); localStorage.setItem('playerName', myName);
             isHost = true;
-            currentStock = UI.stockSelect.value;
-            
             const reqId = UI.customRoomId.value.trim() || undefined;
             peer = new Peer(reqId, { debug: 1 });
             
-            UI.joinOptions.classList.add('hidden');
-            UI.waiting.classList.remove('hidden');
+            UI.joinOptions.classList.add('hidden'); UI.waiting.classList.remove('hidden');
             setupPeerEvents(peer);
-
             peer.on('connection', (conn) => {
                 connections.push(conn);
                 conn.on('data', (data) => handleHostData(conn, data));
@@ -373,17 +298,13 @@
         };
 
         document.getElementById('btnJoinRoom').onclick = () => {
-            if (!UI.nameInput.value.trim()) return showWarning('請輸入車手名稱');
+            if (!UI.nameInput.value.trim()) return showWarning('請輸入你的 ID');
             const roomId = UI.roomIdInput.value.trim();
             if (!roomId) return showWarning('請輸入朋友房號');
             
-            myName = UI.nameInput.value.trim();
-            localStorage.setItem('playerName', myName);
-            isHost = false;
-            
-            peer = new Peer({ debug: 1 });
-            UI.joinOptions.classList.add('hidden');
-            UI.waiting.classList.remove('hidden');
+            myName = UI.nameInput.value.trim(); localStorage.setItem('playerName', myName);
+            isHost = false; peer = new Peer({ debug: 1 });
+            UI.joinOptions.classList.add('hidden'); UI.waiting.classList.remove('hidden');
             setupPeerEvents(peer);
 
             setTimeout(() => {
@@ -398,37 +319,36 @@
 
         UI.btnCopyLink.onclick = () => {
             const url = window.location.origin + window.location.pathname + '?room=' + UI.displayId.textContent;
-            navigator.clipboard.writeText(url);
-            showWarning("✅ 邀請連結已複製！貼給朋友吧！");
+            navigator.clipboard.writeText(url); showWarning("✅ 邀請連結已複製！");
         };
 
         UI.btnStart.onclick = () => {
             if (isHost) {
-                generateMap(currentStock);
-                connections.forEach(c => c.send({ type: 'start_game', stock: currentStock, candles: candlesticks, ma: maPoints, vols: volumes })); 
+                generateMap();
+                connections.forEach(c => c.send({ type: 'start_game', candles: candlesticks, ma: maPoints, vols: volumes })); 
                 startGame();
             }
         };
 
         UI.btnRematch.onclick = () => {
             if (isHost) {
-                generateMap(UI.stockSelect.value);
-                connections.forEach(c => c.send({ type: 'rematch', stock: currentStock, candles: candlesticks, ma: maPoints, vols: volumes }));
+                generateMap();
+                connections.forEach(c => c.send({ type: 'rematch', candles: candlesticks, ma: maPoints, vols: volumes }));
                 prepareRematch();
             }
         };
 
         function handleHostData(conn, data) {
             if (data.type === 'join') {
-                players[data.id] = { name: data.name, x: 50, y: 0, rot: 0, color: data.color, finished: false, crashed: false };
+                players[data.id] = { name: data.name, x: 50, y: 0, rot: 0, color: data.color, finished: false, crashed: false, memeFrozen: false, memeTxt: "" };
                 updatePlayerList();
                 connections.forEach(c => c.send({ type: 'update_players', players: players }));
             }
             if (data.type === 'sync') {
                 if (players[data.id]) {
-                    players[data.id].x = data.x; players[data.id].y = data.y; 
-                    players[data.id].rot = data.rot; players[data.id].crashed = data.crashed;
-                    players[data.id].finished = data.finished;
+                    players[data.id].x = data.x; players[data.id].y = data.y; players[data.id].rot = data.rot; 
+                    players[data.id].crashed = data.crashed; players[data.id].finished = data.finished;
+                    players[data.id].memeFrozen = data.memeFrozen; players[data.id].memeTxt = data.memeTxt;
                     if(data.finished && !players[data.id].finishTime) players[data.id].finishTime = data.time;
                 }
             }
@@ -437,8 +357,7 @@
         function handleClientData(data) {
             if (data.type === 'update_players') { players = data.players; updatePlayerList(); }
             if (data.type === 'start_game' || data.type === 'rematch') { 
-                currentStock = data.stock; candlesticks = data.candles; maPoints = data.ma; volumes = data.vols;
-                UI.tvTicker.textContent = currentStock;
+                candlesticks = data.candles; maPoints = data.ma; volumes = data.vols;
                 if (data.type === 'start_game') startGame(); else prepareRematch();
             }
             if (data.type === 'sync_all') {
@@ -447,6 +366,7 @@
                         players[id].x = data.players[id].x; players[id].y = data.players[id].y; 
                         players[id].rot = data.players[id].rot; players[id].crashed = data.players[id].crashed;
                         players[id].finished = data.players[id].finished; players[id].finishTime = data.players[id].finishTime;
+                        players[id].memeFrozen = data.players[id].memeFrozen; players[id].memeTxt = data.players[id].memeTxt;
                     }
                 }
             }
@@ -464,12 +384,8 @@
         function startGame() {
             UI.container.classList.remove('bg-[#ffffff]', 'bg-opacity-95');
             UI.container.classList.add('pointer-events-none', 'bg-transparent');
-            UI.lobby.classList.add('hidden');
-            UI.result.classList.add('hidden');
-            UI.hud.classList.remove('hidden');
-            resetBike();
-            resizeCanvas();
-            startTime = Date.now();
+            UI.lobby.classList.add('hidden'); UI.result.classList.add('hidden'); UI.hud.classList.remove('hidden');
+            resetBike(); resizeCanvas(); startTime = Date.now();
             
             const pressGas = (e) => { if(e) e.preventDefault(); bike.isGasBtnDown = true; };
             const releaseGas = (e) => { if(e) e.preventDefault(); bike.isGasBtnDown = false; };
@@ -490,89 +406,73 @@
         window.addEventListener('resize', resizeCanvas);
         function resizeCanvas() { UI.canvas.width = window.innerWidth; UI.canvas.height = window.innerHeight; }
 
-        // ==========================================
-        // 核心物理引擎 (腳踏車騰空、翻轉、落地判定)
-        // ==========================================
         function updatePhysics(dt) {
             if (bike.finished) return;
-
             let dtMultiplier = dt * 60; 
-            const gravity = 0.5 * dtMultiplier; // 重力
+
+            // 迷因發作：突然煞車並大喊
+            if (bike.hasMeme && !bike.isMemeFrozen && bike.x > bike.memeTriggerX) {
+                bike.hasMeme = false; 
+                bike.isMemeFrozen = true;
+                bike.memeTimer = 1.5; // 定格 1.5 秒
+                bike.memeText = memeQuotes[Math.floor(Math.random() * memeQuotes.length)];
+                bike.vx = 0; bike.vy = 0;
+            }
+
+            if (bike.isMemeFrozen) {
+                bike.memeTimer -= dt;
+                if (bike.memeTimer <= 0) bike.isMemeFrozen = false;
+                return; // 定格期間跳過物理運算
+            }
 
             if (bike.isCrashed) {
-                // 跌倒爬起動畫 (1秒)
                 bike.crashTimer -= dt;
-                
-                // 讓腳踏車慢慢轉正 (插值回歸賽道角度)
                 let trackA = getTrackData(bike.x).angle;
-                // 用簡單的平滑插值讓它站起來
                 bike.angle += (trackA - bike.angle) * 0.05 * dtMultiplier;
-
                 if (bike.crashTimer <= 0) {
                     bike.isCrashed = false;
                     document.getElementById('crash-warning').classList.add('hidden');
                 }
             } else {
-                // 1. 套用重力
-                bike.vy += gravity;
-
-                // 2. 根據目前狀態計算速度
+                bike.vy += 0.5 * dtMultiplier; // 重力
                 let trackInfo = getTrackData(bike.x);
-                let trackY = trackInfo.y;
-                let trackAngle = trackInfo.angle;
 
                 if (!bike.isAirborne && bike.isGasBtnDown) {
-                    // 在地上且按油門，沿著斜坡加速 (降速 30%)
                     let accel = 0.55 * dtMultiplier;
-                    bike.vx += accel * Math.cos(trackAngle);
-                    bike.vy += accel * Math.sin(trackAngle);
+                    bike.vx += accel * Math.cos(trackInfo.angle);
+                    bike.vy += accel * Math.sin(trackInfo.angle);
                 }
 
-                // 3. 更新位置
                 bike.x += bike.vx * dtMultiplier;
                 bike.y += bike.vy * dtMultiplier;
 
-                // 取得新位置的賽道高度
                 let newTrackInfo = getTrackData(bike.x);
-                let newTrackY = newTrackInfo.y;
-
-                // 4. 地面碰撞與騰空判定
-                // 如果目前 y 大於等於賽道 y，代表撞到地面
-                if (bike.y >= newTrackY) {
-                    
-                    // 如果原本是騰空狀態，現在落地了，檢查有沒有摔車
+                if (bike.y >= newTrackInfo.y) {
                     if (bike.isAirborne) {
-                        // 正規化角度到 -PI ~ PI
                         let nAngle = Math.atan2(Math.sin(bike.angle), Math.cos(bike.angle));
                         let nTrackAngle = Math.atan2(Math.sin(newTrackInfo.angle), Math.cos(newTrackInfo.angle));
-                        
-                        // 計算車身與賽道的角度差
                         let diff = Math.abs(nAngle - nTrackAngle);
-                        if (diff > Math.PI) diff = 2 * Math.PI - diff; // 取最小夾角
+                        if (diff > Math.PI) diff = 2 * Math.PI - diff; 
                         
-                        // 【難度暴增】落地角度偏差大於 35度 (約0.6弧度) 就會跌倒！不再容許亂跳
+                        // 跌倒判定 (大於 35度)
                         if (diff > 0.6) {
                             bike.isCrashed = true;
-                            bike.crashTimer = 1.0; // 爬起需要 1 秒
-                            bike.vx *= 0.1; // 摔車失去大部分動能
-                            bike.vy = 0;
+                            bike.crashTimer = 1.0; 
+                            bike.vx *= 0.1; bike.vy = 0;
                             document.getElementById('crash-warning').classList.remove('hidden');
                         }
                     }
 
                     if (!bike.isCrashed) {
-                        // 正常著地
                         bike.isAirborne = false;
-                        bike.y = newTrackY;
-                        bike.angle = newTrackInfo.angle; // 貼平地面
+                        bike.y = newTrackInfo.y;
+                        bike.angle = newTrackInfo.angle; 
 
-                        // 將目前的 X/Y 速度投影到賽道斜面上 (順暢轉換)
                         let speedAlongTrack = bike.vx * Math.cos(newTrackInfo.angle) + bike.vy * Math.sin(newTrackInfo.angle);
-                        
-                        speedAlongTrack *= Math.pow(0.99, dtMultiplier); // 些微地面摩擦
-                        if (!bike.isGasBtnDown) speedAlongTrack *= Math.pow(0.95, dtMultiplier); // 沒按油門就滑行減速
+                        speedAlongTrack *= Math.pow(0.99, dtMultiplier); 
+                        if (!bike.isGasBtnDown) speedAlongTrack *= Math.pow(0.95, dtMultiplier); 
 
-                        // 【降速 30%】最高速限下修到 18，避免太快破關
+                        // 最高速限限制為 18
                         if (speedAlongTrack > 18) speedAlongTrack = 18;
                         if (speedAlongTrack < -3) speedAlongTrack = -3;
 
@@ -580,206 +480,161 @@
                         bike.vy = speedAlongTrack * Math.sin(newTrackInfo.angle);
                     }
                 } else {
-                    // 在空中飛躍！
-                    if (!bike.isAirborne) {
-                        // 剛起飛的瞬間，決定基礎翻轉速度
-                        bike.spinSpeed = bike.vx * 0.005; 
-                    }
+                    if (!bike.isAirborne) bike.spinSpeed = bike.vx * 0.005; 
                     bike.isAirborne = true;
-                    
-                    // 【死亡懲罰】如果在空中還死按著 GO 鍵，車輛會瘋狂前空翻！
-                    if (bike.isGasBtnDown) {
-                        bike.spinSpeed += 0.003 * dtMultiplier;
-                    }
-                    
-                    // 在空中不斷翻轉
+                    // 在空中死按著油門會瘋狂前空翻
+                    if (bike.isGasBtnDown) bike.spinSpeed += 0.003 * dtMultiplier;
                     bike.angle += bike.spinSpeed * dtMultiplier;
                 }
             }
 
-            // 更新 UI 與頂部 OHLC 模擬
             const progress = Math.min(100, Math.floor((bike.x / trackLength) * 100));
             document.getElementById('hud-dist').textContent = `${progress}%`;
             
-            // 尋找目前的 K 線以更新頂部面板
             let currentCandle = candlesticks.find(c => c.x >= bike.x);
             if(currentCandle && Math.floor(Date.now() / 200) % 2 === 0) {
-                UI.tvO.textContent = currentCandle.open.toFixed(2);
-                UI.tvH.textContent = currentCandle.high.toFixed(2);
+                UI.tvO.textContent = currentCandle.open.toFixed(2); UI.tvH.textContent = currentCandle.high.toFixed(2);
                 UI.tvL.textContent = currentCandle.low.toFixed(2);
-                // 價格跳動效果
                 UI.tvC.textContent = (currentCandle.close + (Math.random()-0.5)*2).toFixed(2);
                 UI.tvC.className = currentCandle.close >= currentCandle.open ? 'text-[#089981]' : 'text-[#f23645]';
             }
         }
 
-        // ==========================================
-        // 繪圖引擎 (TradingView 介面與腳踏車)
-        // ==========================================
-        const cameraZoom = 0.55; // 【畫面縮放係數】拉遠鏡頭，顯示宏觀 K 線
-
         function drawTradingViewChart() {
-            // 背景與網格
+            // 平滑更新世界相機 (鎖定玩家為中心稍微偏左)
+            let targetCamX = bike.x - (UI.canvas.width * 0.3) / cameraZoom;
+            let targetCamY = bike.y - (UI.canvas.height * 0.4) / cameraZoom;
+            // 防止相機超出起點
+            if (targetCamX < 0) targetCamX = 0; 
+
+            camera.x += (targetCamX - camera.x) * 0.1;
+            camera.y += (targetCamY - camera.y) * 0.1;
+
             ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, UI.canvas.width, UI.canvas.height);
             
-            ctx.strokeStyle = '#f0f3fa'; ctx.lineWidth = 1;
-            const offsetX = (bike.x * cameraZoom) % 150;
-            for(let i=0; i<UI.canvas.width; i+=150) { ctx.beginPath(); ctx.moveTo(i - offsetX, 0); ctx.lineTo(i - offsetX, UI.canvas.height); ctx.stroke(); }
-            const offsetY = (bike.y * cameraZoom) % 80;
-            for(let j=0; j<UI.canvas.height; j+=80) { ctx.beginPath(); ctx.moveTo(0, j - offsetY); ctx.lineTo(UI.canvas.width, j - offsetY); ctx.stroke(); }
+            ctx.save();
+            ctx.scale(cameraZoom, cameraZoom);
+            ctx.translate(-camera.x, -camera.y); // 將畫布移動到世界相機位置
+
+            // 1. 繪製絕對靜止的背景網格 (根據相機視角)
+            ctx.strokeStyle = '#f0f3fa'; ctx.lineWidth = 1 / cameraZoom;
+            const left = camera.x, right = camera.x + UI.canvas.width / cameraZoom;
+            const top = camera.y, bottom = camera.y + UI.canvas.height / cameraZoom;
             
-            // 浮水印
+            for(let i = Math.floor(left/150)*150; i < right; i+=150) { ctx.beginPath(); ctx.moveTo(i, top); ctx.lineTo(i, bottom); ctx.stroke(); }
+            for(let j = Math.floor(top/80)*80; j < bottom; j+=80) { ctx.beginPath(); ctx.moveTo(left, j); ctx.lineTo(right, j); ctx.stroke(); }
+            
+            // 2. 浮水印
             ctx.fillStyle = 'rgba(240, 243, 250, 0.8)';
             ctx.font = 'bold 200px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(currentStock, UI.canvas.width/2, UI.canvas.height/2);
+            ctx.fillText("TSLA", left + (right - left)/2, top + (bottom - top)/2);
 
-            ctx.save();
-            // 攝影機對焦與全局縮放
-            ctx.translate(UI.canvas.width / 4, UI.canvas.height / 2 + 50);
-            ctx.scale(cameraZoom, cameraZoom);
-            
-            // 1. 繪製底部成交量 (Volume)
+            // 3. 繪製底部成交量與 K 線
             candlesticks.forEach((c, idx) => {
-                const screenX = c.x - bike.x;
-                if (screenX * cameraZoom > -UI.canvas.width && screenX * cameraZoom < UI.canvas.width * 1.5) {
-                    const color = c.close >= c.open ? 'rgba(8, 153, 129, 0.3)' : 'rgba(242, 54, 69, 0.3)';
-                    const vHeight = volumes[idx] * 0.5;
-                    ctx.fillStyle = color;
-                    ctx.fillRect(screenX - 6, UI.canvas.height/2 - vHeight - bike.y + 400, 12, vHeight);
-                }
-            });
-
-            // 2. 繪製巨大 K 線棒
-            candlesticks.forEach(c => {
-                const screenX = c.x - bike.x;
-                if (screenX * cameraZoom > -UI.canvas.width && screenX * cameraZoom < UI.canvas.width * 1.5) {
+                if (c.x > left - 100 && c.x < right + 100) {
                     const isUp = c.close >= c.open;
                     const color = isUp ? '#089981' : '#f23645'; 
-                    // 影線 (High/Low)
+                    const vHeight = volumes[idx] * 0.5;
+                    ctx.fillStyle = isUp ? 'rgba(8, 153, 129, 0.3)' : 'rgba(242, 54, 69, 0.3)';
+                    ctx.fillRect(c.x - 6, 1100 - vHeight, 12, vHeight); // 量
+                    
                     ctx.strokeStyle = color; ctx.lineWidth = 2;
-                    ctx.beginPath(); ctx.moveTo(screenX, 700 - c.high - bike.y); ctx.lineTo(screenX, 700 - c.low - bike.y); ctx.stroke();
-                    // 實體 (Open/Close)
+                    ctx.beginPath(); ctx.moveTo(c.x, 700 - c.high); ctx.lineTo(c.x, 700 - c.low); ctx.stroke(); // 影線
+                    
                     ctx.fillStyle = color;
-                    let bodyTop = 700 - Math.max(c.open, c.close) - bike.y;
-                    let bodyHeight = Math.abs(c.close - c.open);
-                    if(bodyHeight < 2) bodyHeight = 2; // 十字線防護
-                    ctx.fillRect(screenX - 12, bodyTop, 24, bodyHeight); // 加粗 K 線
+                    let bodyTop = 700 - Math.max(c.open, c.close);
+                    let bodyHeight = Math.max(2, Math.abs(c.close - c.open));
+                    ctx.fillRect(c.x - 12, bodyTop, 24, bodyHeight); // 實體
                 }
             });
 
-            // 3. 繪製 5 日均線賽道 (MA Track)
-            ctx.beginPath();
-            ctx.lineWidth = 8;
-            ctx.lineJoin = "round";
+            // 4. 繪製 5 日均線賽道
+            ctx.beginPath(); ctx.lineWidth = 8; ctx.lineJoin = "round";
             for (let i = 0; i < maPoints.length - 1; i++) {
-                const p1 = maPoints[i], p2 = maPoints[i+1];
-                const screenX = p1.x - bike.x;
-                if (screenX * cameraZoom > -UI.canvas.width && screenX * cameraZoom < UI.canvas.width * 1.5) {
-                    if(i === 0) ctx.moveTo(screenX, p1.y - bike.y);
-                    ctx.lineTo(p2.x - bike.x, p2.y - bike.y);
+                if (maPoints[i].x > left - 200 && maPoints[i].x < right + 200) {
+                    if(i === 0 || maPoints[i-1].x <= left - 200) ctx.moveTo(maPoints[i].x, maPoints[i].y);
+                    ctx.lineTo(maPoints[i+1].x, maPoints[i+1].y);
                 }
             }
-            // 讓均線有漂亮的光暈
-            ctx.strokeStyle = '#2962ff'; 
-            ctx.shadowColor = 'rgba(41, 98, 255, 0.4)'; ctx.shadowBlur = 15;
+            ctx.strokeStyle = '#2962ff'; ctx.shadowColor = 'rgba(41, 98, 255, 0.4)'; ctx.shadowBlur = 15;
             ctx.stroke(); ctx.shadowBlur = 0;
             
-            // 畫終點線
-            if ((trackLength - bike.x) * cameraZoom < UI.canvas.width) {
-                const finishX = trackLength - bike.x;
-                ctx.fillStyle = '#131722';
-                ctx.fillRect(finishX, -2000 - bike.y, 15, 4000);
-                ctx.font = 'bold 48px Arial'; ctx.fillText('TAKE PROFIT (終點)', finishX, -200 - bike.y);
+            // 5. 畫終點紅旗
+            if (trackLength > left && trackLength < right + 500) {
+                const finishY = maPoints[maPoints.length-1].y;
+                ctx.fillStyle = '#787b86'; ctx.fillRect(trackLength, finishY - 200, 6, 200); // 旗桿
+                ctx.fillStyle = '#f23645'; 
+                ctx.beginPath(); ctx.moveTo(trackLength + 6, finishY - 190); ctx.lineTo(trackLength + 80, finishY - 160); ctx.lineTo(trackLength + 6, finishY - 130); ctx.fill(); // 紅旗
+                ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillText('FINISH', trackLength + 12, finishY - 155);
             }
             ctx.restore();
 
-            // =========================
-            // 繪製日期 X 軸 (底部時間線)
-            // =========================
-            ctx.fillStyle = '#ffffff'; 
-            ctx.fillRect(0, UI.canvas.height - 30, UI.canvas.width, 30);
+            // 6. UI 層: 底部日期 X 軸
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, UI.canvas.height - 30, UI.canvas.width, 30);
             ctx.strokeStyle = '#e0e3eb'; ctx.beginPath(); ctx.moveTo(0, UI.canvas.height - 30); ctx.lineTo(UI.canvas.width, UI.canvas.height - 30); ctx.stroke();
             
             ctx.fillStyle = '#787b86'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            let lastDrawnMonth = ""; 
+            let lastMonth = ""; 
             candlesticks.forEach(c => {
-                const screenX = (c.x - bike.x) * cameraZoom + UI.canvas.width / 4;
+                const screenX = (c.x - camera.x) * cameraZoom;
                 if (screenX > 0 && screenX < UI.canvas.width) {
-                    const dateParts = c.date.split('-');
-                    const monthKey = `${dateParts[0]}-${dateParts[1]}`;
-                    // 每個月只畫一次大標籤
-                    if (monthKey !== lastDrawnMonth) {
+                    const monthKey = c.date.substring(0, 7); // YYYY-MM
+                    if (monthKey !== lastMonth) {
                         ctx.beginPath(); ctx.moveTo(screenX, UI.canvas.height - 30); ctx.lineTo(screenX, UI.canvas.height - 25); ctx.stroke();
-                        ctx.fillText(`${dateParts[0]}年${dateParts[1]}月`, screenX, UI.canvas.height - 15);
-                        lastDrawnMonth = monthKey;
+                        ctx.fillText(monthKey.replace('-', '年') + '月', screenX, UI.canvas.height - 15);
+                        lastMonth = monthKey;
                     }
                 }
             });
 
-            // 右側 Y 軸刻度
+            // 7. UI 層: 右側價格 Y 軸
             ctx.fillStyle = '#ffffff'; ctx.fillRect(UI.canvas.width - 60, 50, 60, UI.canvas.height - 80);
             ctx.strokeStyle = '#e0e3eb'; ctx.beginPath(); ctx.moveTo(UI.canvas.width - 60, 50); ctx.lineTo(UI.canvas.width - 60, UI.canvas.height - 30); ctx.stroke();
             ctx.fillStyle = '#131722'; ctx.font = '11px Arial'; ctx.textAlign = 'right';
             for(let j=0; j<UI.canvas.height; j+=80) {
-                let simPrice = (700 - (bike.y + (j - UI.canvas.height/2 - 50) / cameraZoom)).toFixed(1);
-                ctx.fillText(simPrice, UI.canvas.width - 8, j - offsetY + 4 + 50);
+                let simPrice = (700 - (camera.y + (j - 50) / cameraZoom)).toFixed(1);
+                ctx.fillText(simPrice, UI.canvas.width - 8, j + 4 + 50);
             }
         }
 
-        // 繪製腳踏車與火柴人
-        function drawBicycle(x, y, angle, color, name, isMe, isCrashed) {
+        function drawBicycle(x, y, angle, color, name, isCrashed, isFrozen, memeTxt) {
             ctx.save();
-            if (isMe) {
-                ctx.translate(UI.canvas.width / 4, UI.canvas.height / 2 + 50); 
-            } else {
-                ctx.translate(UI.canvas.width / 4 + (x - bike.x) * cameraZoom, UI.canvas.height / 2 + 50 + (y - bike.y) * cameraZoom);
-            }
-            
             ctx.scale(cameraZoom, cameraZoom);
+            ctx.translate((x - camera.x), (y - camera.y)); // 依據世界相機定位
+            
+            // 繪製迷因對話框 (不受旋轉影響)
+            if (isFrozen && memeTxt) {
+                ctx.save();
+                ctx.translate(0, -100);
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#131722'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.roundRect(-100, -50, 200, 45, 10); ctx.fill(); ctx.stroke(); // 泡泡
+                ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(0, 15); ctx.lineTo(15, -5); ctx.fill(); ctx.stroke(); // 尾巴
+                ctx.fillStyle = '#f23645'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(memeTxt, 0, -28);
+                ctx.restore();
+            }
+
             ctx.rotate(angle);
 
-            // 名字 ID
+            // 名字 ID (所有人都顯示名字)
             ctx.fillStyle = color; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
             ctx.fillText(name, 0, -60);
 
-            // 車身線條
+            // 車身
             ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-            
-            // 輪胎
-            ctx.beginPath(); ctx.arc(-22, -10, 10, 0, Math.PI*2); ctx.stroke(); // 後輪
-            ctx.beginPath(); ctx.arc(22, -10, 10, 0, Math.PI*2); ctx.stroke(); // 前輪
-            
-            // 車架
-            ctx.beginPath();
-            ctx.moveTo(-22, -10); // 後輪心
-            ctx.lineTo(-6, -30); // 座椅管
-            ctx.lineTo(12, -30);  // 上管
-            ctx.lineTo(22, -10);  // 前叉
-            ctx.moveTo(12, -30);
-            ctx.lineTo(0, -10);   // 下管
-            ctx.lineTo(-22, -10); // 後下叉
-            ctx.stroke();
-            
-            // 把手與坐墊
-            ctx.beginPath(); ctx.moveTo(-10, -30); ctx.lineTo(-2, -30); ctx.lineWidth = 6; ctx.stroke(); // 坐墊
-            ctx.beginPath(); ctx.moveTo(12, -30); ctx.lineTo(10, -40); ctx.lineTo(16, -40); ctx.lineWidth = 5; ctx.stroke(); // 把手
+            ctx.beginPath(); ctx.arc(-22, -10, 10, 0, Math.PI*2); ctx.stroke(); 
+            ctx.beginPath(); ctx.arc(22, -10, 10, 0, Math.PI*2); ctx.stroke(); 
+            ctx.beginPath(); ctx.moveTo(-22, -10); ctx.lineTo(-6, -30); ctx.lineTo(12, -30); ctx.lineTo(22, -10); 
+            ctx.moveTo(12, -30); ctx.lineTo(0, -10); ctx.lineTo(-22, -10); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-10, -30); ctx.lineTo(-2, -30); ctx.lineWidth = 6; ctx.stroke(); 
+            ctx.beginPath(); ctx.moveTo(12, -30); ctx.lineTo(10, -40); ctx.lineTo(16, -40); ctx.lineWidth = 5; ctx.stroke(); 
 
-            // 騎士火柴人
+            // 火柴人
             ctx.strokeStyle = '#131722'; ctx.fillStyle = '#131722'; ctx.lineWidth = 5;
-            
-            if (isCrashed) {
-                // 跌倒狀態：火柴人掛在車把上或扭曲
-                ctx.translate(10, -15);
-                ctx.rotate(Math.PI / 2);
-            }
-            
-            // 頭
+            if (isCrashed) { ctx.translate(10, -15); ctx.rotate(Math.PI / 2); }
             ctx.beginPath(); ctx.arc(0, -55, 7, 0, Math.PI*2); ctx.fill();
-            // 身體
             ctx.beginPath(); ctx.moveTo(0, -48); ctx.lineTo(-4, -30); ctx.stroke();
-            // 手臂
             ctx.beginPath(); ctx.moveTo(0, -42); ctx.lineTo(12, -40); ctx.stroke();
-            // 腿
             ctx.beginPath(); ctx.moveTo(-4, -30); ctx.lineTo(0, -20); ctx.lineTo(0, -10); ctx.stroke();
 
             ctx.restore();
@@ -794,30 +649,25 @@
             updatePhysics(dt);
             drawTradingViewChart();
 
-            // 繪製其他玩家
             for (let id in players) {
                 if (id !== myId) {
                     const p = players[id];
-                    drawBicycle(p.x, p.y, p.rot, p.color, p.name, false, p.crashed);
+                    drawBicycle(p.x, p.y, p.rot, p.color, p.name, p.crashed, p.memeFrozen, p.memeTxt);
                 }
             }
-            // 繪製自己
-            drawBicycle(bike.x, bike.y, bike.angle, myColor, "你", true, bike.isCrashed);
+            drawBicycle(bike.x, bike.y, bike.angle, myColor, myName, bike.isCrashed, bike.isMemeFrozen, bike.memeText);
 
-            syncNetwork();
-            checkFinish();
-
-            if (!bike.finished || isHost) {
-                gameLoopId = requestAnimationFrame(gameLoop);
-            }
+            syncNetwork(); checkFinish();
+            if (!bike.finished || isHost) gameLoopId = requestAnimationFrame(gameLoop);
         }
 
         function syncNetwork() {
             if (Math.floor(Date.now() / 50) % 2 === 0) {
-                const myState = { type: 'sync', id: myId, x: bike.x, y: bike.y, rot: bike.angle, crashed: bike.isCrashed, finished: bike.finished, time: bike.finishTime };
+                const myState = { type: 'sync', id: myId, x: bike.x, y: bike.y, rot: bike.angle, crashed: bike.isCrashed, finished: bike.finished, time: bike.finishTime, memeFrozen: bike.isMemeFrozen, memeTxt: bike.memeText };
                 if (isHost) {
                     players[myId].x = bike.x; players[myId].y = bike.y; players[myId].rot = bike.angle; 
                     players[myId].crashed = bike.isCrashed; players[myId].finished = bike.finished;
+                    players[myId].memeFrozen = bike.isMemeFrozen; players[myId].memeTxt = bike.memeText;
                     if(bike.finished && !players[myId].finishTime) players[myId].finishTime = bike.finishTime;
                     connections.forEach(c => c.send({ type: 'sync_all', players: players }));
                 } else {
@@ -828,8 +678,7 @@
 
         function checkFinish() {
             if (!bike.finished && bike.x >= trackLength) {
-                bike.finished = true;
-                bike.finishTime = Date.now() - startTime;
+                bike.finished = true; bike.finishTime = Date.now() - startTime;
                 setTimeout(checkAllFinished, 1000);
             }
         }
@@ -843,40 +692,22 @@
 
             if (allDone && results.length > 0) {
                 cancelAnimationFrame(gameLoopId);
-                UI.hud.classList.add('hidden');
-                UI.container.classList.remove('pointer-events-none', 'bg-transparent');
-                UI.container.classList.add('bg-[#ffffff]', 'bg-opacity-90');
-                UI.result.classList.remove('hidden');
-
+                UI.hud.classList.add('hidden'); UI.container.classList.remove('pointer-events-none', 'bg-transparent'); UI.container.classList.add('bg-[#ffffff]', 'bg-opacity-90'); UI.result.classList.remove('hidden');
                 if (isHost) { UI.btnRematch.classList.remove('hidden'); UI.btnWaitRematch.classList.add('hidden'); } 
                 else { UI.btnRematch.classList.add('hidden'); UI.btnWaitRematch.classList.remove('hidden'); }
 
                 results.sort((a, b) => a.time - b.time);
                 UI.board.innerHTML = '';
-                
                 results.forEach((r, index) => {
                     const isLoser = index === results.length - 1;
-                    const timeStr = (r.time / 1000).toFixed(2) + 's';
                     const el = document.createElement('div');
                     el.className = `flex justify-between p-3 rounded font-bold ${isLoser ? 'bg-[#fff0f0] text-[#f23645]' : 'bg-white text-[#131722]'}`;
-                    el.innerHTML = `<span>#${index + 1} ${r.name}</span> <span class="font-mono">${timeStr}</span>`;
+                    el.innerHTML = `<span>#${index + 1} ${r.name}</span> <span class="font-mono">${(r.time / 1000).toFixed(2)}s</span>`;
                     UI.board.appendChild(el);
                     if (isLoser) UI.loserName.textContent = r.name;
                 });
-            } else if (bike.finished) {
-                setTimeout(checkAllFinished, 1000); 
-            }
+            } else if (bike.finished) setTimeout(checkAllFinished, 1000); 
         }
     </script>
 </body>
 </html>
-```
-
-### 🎮 這次更新的試玩重點：
-你可以立刻複製這段代碼在瀏覽器跑跑看。
-1. **享受起飛的快感：** 當你按著 GO 衝上大紅 K 線的山峰時，腳踏車會**完全脫離均線飛向空中**。
-2. **控制翻滾：** 在空中時，腳踏車會隨著慣性前空翻。此時你的心臟會撲通撲通跳，因為你不知道它落地時會不會是頭朝下。
-3. **體驗「跌倒懲罰」：** 故意在下坡前瘋狂加速，讓自己頭朝下落地。你會看到火柴人掛在車上、並用 1 秒鐘的緩慢動畫掙扎著「轉正爬起來」。
-4. **細節滿滿的介面：** 左側工具箱、上方 OHLC 數字都會隨著你的前進而跳動，你就像是在一邊騎腳踏車一邊看盤一樣！
-
-現在，這個遊戲已經具備了「易學難精」的派對遊戲潛質，只要會按一個鈕，但能不能順利降落全是本事。快上傳去 Vercel 更新，今晚再讓朋友們見識一下你的「五日線車神」技術吧！
