@@ -187,7 +187,7 @@
         
         const myColor = ["#2962ff", "#f23645", "#089981", "#ff9800", "#9c27b0", "#e91e63"][Math.floor(Math.random()*6)];
         
-        // 100句 迷因金句資料庫
+        // 擴充至 200 句迷因金句資料庫
         const memeQuotes = [
             // WSB & 經典交易韭菜語錄
             "Buy high, sell low!", "Diamond hands! 💎🙌", "To the moon?! 🚀", "Margin called... 📉",
@@ -220,14 +220,54 @@
             "I am the exit liquidity.", "Exit liquidity right here.", "Stop loss hunting.",
             "Why did I listen to Jim Cramer?!", "Inverse Cramer never fails.", "I should have bought VOO.",
             
-            // 隨機胡言亂語
+            // 隨機胡言亂語與更多絕望
             "I hate money.", "Poverty builds character.", "Can I write this off my taxes?",
             "Wall Street stole my lunch money.", "Working at McDonald's tomorrow.", "Need a sugar mommy now.",
             "Selling my kidney for TSLA.", "Who needs retirement anyway?", "I will work until I'm 90.",
             "At least I have my health...", "Heart rate is tracking the chart.", "Please let me break even.",
             "I'll never trade again. (Lies)", "Just one good trade needed.", "Professional bag holder.",
             "Heavy bags today.", "My arms are tired from holding bags.", "Can someone turn off the market?",
-            "I want a refund.", "Game over."
+            "I want a refund.", "Game over.", "Buy the rumor, sell the news.", "Time in the market...",
+            "Be greedy when others are fearful.", "I am very fearful right now.", "Apes together strong! 🦍",
+            "I like the stock.", "Short ladders!", "Naked shorting!", "SEC, do your job!",
+            "Call my broker immediately.", "Broker app is down again.", "Robinhood disabled the buy button.",
+            "I'm moving to a tax haven.", "Is bankruptcy an option?", "Just filed for Chapter 11.",
+            "My cat picks better stocks.", "Astrology for men (TA).", "Look at this head and shoulders!",
+            "Support level broken.", "Resistance is too strong.", "MACD crossed bearish.", "RSI is oversold!",
+            "Fibonacci says it will bounce.", "Trust me bro.", "My insider source lied.", "Cramer said it's a buy.",
+            "DCA all the way down.", "Averaging down into oblivion.", "My portfolio is 99% red.",
+            "Can I pay rent with exposure?", "Should have bought real estate.", "Cash is trash?",
+            "Inflation is eating my money.", "Soft landing they said.", "Recession canceled?",
+            "Yield curve inverted again.", "I don't even know what a bond is.", "Options are just gambling.",
+            "Theta decay is real.", "Gamma squeeze!", "IV crush ruined my calls.", "Selling puts on margin.",
+            "NVIDIA save us all.", "Jensen Huang sign my GPU.", "AI will fix my portfolio.",
+            "Sam Altman took my job.", "ChatGPT, how to get rich?", "Bitcoin fixes this.",
+            "Satoshi, please return.", "Not your keys, not your coins.", "I lost my hardware wallet.",
+            "FTX took my funds.", "SBF is in jail, I am in debt.", "Luna to zero.", "SafeMoon wasn't safe.",
+            "Minting NFTs to pay rent.", "My Bored Ape is worthless.", "Web3 is the future... right?",
+            "Metaverse real estate baron.", "Zuck, pump META please.", "Tim Apple, release the car.",
+            "Buying AAPL at the top.", "Warren Buffett is laughing at me.", "Charlie Munger was right.",
+            "Index funds are too boring.", "I need 1000% returns.", "Get rich quick scheme failed.",
+            "Is it too late to buy?", "Fear of Missing Out (FOMO).", "Panic sold the bottom.",
+            "Revenge trading right now.", "Emotions are controlling me.", "I need a financial advisor.",
+            "Divorced over a margin call.", "Sleeping on the couch tonight.", "Ramen noodles for dinner.",
+            "Water and sleep for dinner.", "Cancel Netflix to buy more shares.", "My net worth is a meme.",
+            "Generational wealth... gone.", "Building generational debt.", "I am the black sheep now.",
+            "Family dinner will be awkward.", "Don't ask about my investments.", "Yes mom, I'm doing fine.",
+            "Fake it till you make it.", "I drive a Toyota now.", "Selling the Lambo.",
+            "Bus pass secured.", "Walking to work.", "My shoes have holes.",
+            "I sold my TV for shares.", "At least the charts look pretty.", "Candlesticks give me nightmares.",
+            "Green means go... down?", "Red is a festive color.", "Christmas came early (for bears).",
+            "Santa rally is a lie.", "Sell in May and go away.", "September effect is real.",
+            "Market manipulation!", "The system is rigged.", "Whales are dumping.",
+            "Retail is always the victim.", "I am a retail peasant.", "Institutional money wins again.",
+            "Dark pools!", "Payment for Order Flow.", "I am the product.",
+            "Just close the app.", "Delete the app, problem solved.", "If I don't look, I didn't lose.",
+            "Schrödinger's portfolio.", "Ignorance is bliss.", "Checking my phone every 5 seconds.",
+            "Screen time: 18 hours.", "My eyes hurt.", "Stress level: 10000.",
+            "I need a vacation.", "Can't afford a vacation.", "Staycation it is.",
+            "Maybe I should start a YouTube channel.", "Financial guru in the making.", "Buy my course!",
+            "Smash that like button.", "Not financial advice.", "Do your own research (DYOR)."
         ];
 
         // 賽道資料
@@ -649,20 +689,20 @@
             // 繪製迷因對話框 (不受旋轉影響)
             if (isFrozen && memeTxt) {
                 ctx.save();
-                ctx.translate(0, -100);
-                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#131722'; ctx.lineWidth = 3;
-                ctx.beginPath(); ctx.roundRect(-100, -50, 200, 45, 10); ctx.fill(); ctx.stroke(); // 泡泡
-                ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(0, 15); ctx.lineTo(15, -5); ctx.fill(); ctx.stroke(); // 尾巴
-                ctx.fillStyle = '#f23645'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(memeTxt, 0, -28);
+                ctx.translate(0, -160); // 往上移，避免擋住 ID
+                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#131722'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.roundRect(-250, -60, 500, 80, 15); ctx.fill(); ctx.stroke(); // 泡泡變大
+                ctx.beginPath(); ctx.moveTo(-15, 20); ctx.lineTo(0, 45); ctx.lineTo(15, 20); ctx.fill(); ctx.stroke(); // 尾巴
+                ctx.fillStyle = '#f23645'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; // 字體放大為 40px
+                ctx.fillText(memeTxt, 0, -20, 480); // 加上 max-width 防止爆框
                 ctx.restore();
             }
 
             ctx.rotate(angle);
 
-            // 名字 ID (所有人都顯示名字)
+            // 名字 ID (所有人都顯示名字，上移至 -110 避開頭部)
             ctx.fillStyle = color; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText(name, 0, -60);
+            ctx.fillText(name, 0, -110);
 
             // 車身
             ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -755,3 +795,6 @@
     </script>
 </body>
 </html>
+```
+
+請查看你在對話框（左邊這側）或是右側編輯器中是否已經顯示完整！
