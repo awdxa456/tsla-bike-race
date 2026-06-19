@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>飆股摩托大亂鬥 - TradingView 版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <style>
+        /* TradingView 風格配色 */
+        body { margin: 0; overflow: hidden; background-color: #131722; color: #d1d4dc; font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif; touch-action: none; user-select: none; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
+        .interactive { pointer-events: auto; }
+        .hidden { display: none !important; }
+        
+        /* 輸入框與按鈕的金融風 */
+        input, select { background-color: #2a2e39; border: 1px solid #363c4e; color: #d1d4dc; }
+        input:focus, select:focus { border-color: #2962ff; outline: none; }
+        
+        /* 控制按鈕 */
+        .control-btn {
+            background: rgba(41, 98, 255, 0.2); border: 2px solid #2962ff;
+            border-radius: 50%; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: 900; color: white;
+            box-shadow: 0 0 15px rgba(41, 98, 255, 0.3); transition: all 0.05s ease;
+        }
+        .control-btn:active { background: rgba(41, 98, 255, 0.6); transform: scale(0.9); }
+
+        /* 溫度計 UI */
+        .heat-bar-container {
+            width: 150px; height: 10px; background-color: #2a2e39; border-radius: 5px; overflow: hidden; border: 1px solid #363c4e;
+        }
+        .heat-bar-fill {
+            height: 100%; width: 0%; background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444); transition: width 0.1s;
+        }
+        .overheated { animation: blink-red 0.5s infinite alternate; }
+        @keyframes blink-red { from { box-shadow: 0 0 10px red; border-color: red; } to { box-shadow: 0 0 30px red; border-color: darkred; } }
+    </style>
+</head>
+<body>
+
+    <!-- 遊戲畫布 -->
+    <canvas id="gameCanvas" class="hidden"></canvas>
+
+    <!-- UI 介面層 -->
+    <div id="ui-container" class="ui-layer interactive items-center justify-center bg-[#131722] p-4 z-10">
+        
+        <!-- 警告提示 -->
+        <div id="custom-alert" class="hidden fixed top-5 bg-red-600 text-white px-6 py-3 rounded font-bold shadow-lg z-50">
+            ⚠️ <span id="alert-text">提示</span>
+        </div>
+
+        <!-- 1. 大廳畫面 -->
+        <div id="lobby-screen" class="bg-[#1e222d] p-8 rounded-lg shadow-2xl max-w-md w-full text-center border border-[#363c4e]">
+            <h1 class="text-3xl font-black mb-2 text-[#2962ff] tracking-widest">📈 TRADING RIDER</h1>
+            <p class="text-gray-400 mb-6 text-sm">輸的請客！請控制油門，避免過熱熄火！</p>
+            
+            <input type="text" id="playerName" placeholder="輸入玩家 ID" class="w-full p-3 mb-6 rounded text-center text-lg font-bold" maxlength="10">
+            
+            <div id="join-options" class="flex flex-col gap-4">
+                <!-- 建立房間區 -->
+                <div class="bg-[#2a2e39] p-4 rounded border border-[#363c4e]">
+                    <h3 class="text-sm text-gray-400 mb-2 font-bold text-left">當莊家 (建立房間)</h3>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="customRoomId" placeholder="自訂房號 (選填)" class="w-1/2 p-2 rounded text-center text-sm">
+                        <select id="stockSelect" class="w-1/2 p-2 rounded text-sm font-bold text-[#2962ff]">
+                            <option value="TSLA">TSLA (暴跌暴漲)</option>
+                            <option value="NVDA">NVDA (穩步陡升)</option>
+                            <option value="GME">GME (死魚轉沖天)</option>
+                        </select>
+                    </div>
+                    <button id="btnCreateRoom" class="w-full py-2 bg-[#2962ff] hover:bg-blue-600 rounded font-bold text-white transition">開房</button>
+                </div>
+                
+                <div class="flex items-center gap-2"><hr class="flex-grow border-[#363c4e]"><span class="text-gray-500 text-xs">OR</span><hr class="flex-grow border-[#363c4e]"></div>
+                
+                <!-- 加入房間區 -->
+                <div class="flex gap-2">
+                    <input type="text" id="roomIdInput" placeholder="輸入房號" class="w-2/3 p-3 rounded text-center font-bold">
+                    <button id="btnJoinRoom" class="w-1/3 bg-[#089981] hover:bg-emerald-600 rounded text-white font-bold transition">加入</button>
+                </div>
+            </div>
+
+            <!-- 等待畫面 -->
+            <div id="room-waiting" class="hidden flex-col items-center mt-2">
+                <div class="flex justify-between items-center w-full bg-[#2a2e39] p-3 rounded border border-[#363c4e] mb-4">
+                    <div class="text-left">
+                        <p class="text-xs text-gray-400">當前房號</p>
+                        <h2 id="displayRoomId" class="text-xl text-[#f23645] font-black tracking-widest select-all">---</h2>
+                    </div>
+                    <button id="btnCopyLink" class="bg-[#363c4e] hover:bg-gray-600 text-white text-xs px-3 py-2 rounded transition">🔗 複製邀請連結</button>
+                </div>
+                
+                <div class="w-full bg-[#131722] rounded p-4 mb-4 min-h-[120px] text-left border border-[#363c4e]">
+                    <h3 class="text-[#d1d4dc] text-sm mb-2 font-bold border-b border-[#363c4e] pb-1">在線車手：</h3>
+                    <ul id="playerList" class="space-y-1 font-mono font-bold"></ul>
+                </div>
+                <button id="btnStartGame" class="w-full py-3 bg-[#f23645] hover:bg-red-600 rounded font-black text-white text-xl transition hidden">🔥 開始軋空 (START) !</button>
+                <p id="waitingText" class="text-gray-400 animate-pulse text-sm">等待莊家發車...</p>
+            </div>
+        </div>
+
+        <!-- 2. 遊戲內 UI -->
+        <div id="game-hud" class="hidden w-full h-full flex-col justify-between p-4 pointer-events-none">
+            <!-- 頂部資訊列 -->
+            <div class="flex justify-between items-start pointer-events-auto">
+                <div class="flex gap-4">
+                    <!-- 左上資訊 -->
+                    <div class="bg-[#1e222d] p-2 rounded text-xs font-mono border border-[#363c4e] shadow-lg opacity-90">
+                        <div id="hud-stock-name" class="text-[#2962ff] font-black text-lg">TSLA</div>
+                        <div id="hud-dist" class="text-gray-300">完成度: 0%</div>
+                    </div>
+                    <!-- 溫度計難度機制 -->
+                    <div id="heat-panel" class="bg-[#1e222d] p-2 rounded border border-[#363c4e] shadow-lg opacity-90 flex flex-col justify-center items-center">
+                        <span class="text-[10px] text-gray-400 font-bold mb-1">引擎溫度 (勿長按)</span>
+                        <div class="heat-bar-container"><div id="heat-bar" class="heat-bar-fill"></div></div>
+                        <span id="heat-warning-text" class="text-[10px] text-red-500 font-black mt-1 hidden">⚠️ 過熱熄火中!</span>
+                    </div>
+                </div>
+
+                <!-- 摔車提示 -->
+                <div id="crash-warning" class="hidden bg-[#f23645] text-white px-4 py-2 rounded font-black animate-pulse shadow-[0_0_15px_#f23645]">
+                    💥 爆倉摔車！(延遲2秒)
+                </div>
+            </div>
+            
+            <!-- 底部操作區 -->
+            <div class="flex justify-between items-end pb-8 pointer-events-auto w-full">
+                <div></div>
+                <div class="pr-6">
+                    <button id="btnGas" class="control-btn">GO</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 結算畫面 -->
+        <div id="result-screen" class="hidden bg-[#1e222d] p-8 rounded-lg shadow-2xl max-w-md w-full text-center border border-[#363c4e]">
+            <h1 class="text-4xl font-black mb-6 text-white tracking-widest">收盤結算</h1>
+            <div id="leaderboard" class="w-full bg-[#131722] rounded p-4 mb-6 text-left space-y-2 border border-[#363c4e]">
+                <!-- 榜單 -->
+            </div>
+            <div id="loser-pays" class="bg-[rgba(242,54,69,0.1)] border-2 border-[#f23645] p-5 rounded-lg mb-6">
+                <h2 class="text-xl font-bold text-[#f23645]">🚨 韭菜買單 🚨</h2>
+                <p id="loserName" class="text-3xl font-black text-white mt-2">某某某</p>
+                <p class="text-sm text-gray-400 mt-1">今晚請客啦！</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="btnRematch" class="w-full py-3 bg-[#2962ff] hover:bg-blue-600 text-white rounded font-bold transition hidden">🔄 再軋一局</button>
+                <button id="btnWaitRematch" class="w-full py-3 bg-[#363c4e] text-gray-400 rounded font-bold cursor-not-allowed hidden">等待莊家重開...</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const UI = {
+            nameInput: document.getElementById('playerName'),
+            roomIdInput: document.getElementById('roomIdInput'),
+            customRoomId: document.getElementById('customRoomId'),
+            stockSelect: document.getElementById('stockSelect'),
+            container: document.getElementById('ui-container'),
+            lobby: document.getElementById('lobby-screen'),
+            joinOptions: document.getElementById('join-options'),
+            waiting: document.getElementById('room-waiting'),
+            displayId: document.getElementById('displayRoomId'),
+            playerList: document.getElementById('playerList'),
+            btnStart: document.getElementById('btnStartGame'),
+            btnCopyLink: document.getElementById('btnCopyLink'),
+            waitingText: document.getElementById('waitingText'),
+            canvas: document.getElementById('gameCanvas'),
+            hud: document.getElementById('game-hud'),
+            btnGas: document.getElementById('btnGas'),
+            result: document.getElementById('result-screen'),
+            board: document.getElementById('leaderboard'),
+            loserName: document.getElementById('loserName'),
+            btnRematch: document.getElementById('btnRematch'),
+            btnWaitRematch: document.getElementById('btnWaitRematch'),
+            heatBar: document.getElementById('heat-bar'),
+            heatPanel: document.getElementById('heat-panel'),
+            heatWarning: document.getElementById('heat-warning-text')
+        };
+        const ctx = UI.canvas.getContext('2d');
+
+        function showWarning(msg) {
+            const box = document.getElementById('custom-alert');
+            document.getElementById('alert-text').textContent = msg;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 3000);
+        }
+
+        // URL 參數自動填寫 (支援分享連結)
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlRoom = urlParams.get('room');
+        if (urlRoom) {
+            UI.roomIdInput.value = urlRoom;
+            showWarning("已從連結載入房號！請輸入大名加入。");
+        }
+
+        // 系統狀態
+        let myName = localStorage.getItem('playerName') || "";
+        UI.nameInput.value = myName;
+        
+        let peer = null, isHost = false, myId = null, currentStock = 'TSLA';
+        let connections = [], hostConnection = null, players = {};
+        let gameLoopId = null, lastTime = 0;
+        const myColor = ["#2962ff", "#f23645", "#089981", "#ff9800", "#9c27b0", "#e91e63"][Math.floor(Math.random()*6)];
+
+        // 產生財經走勢線圖 (地圖生成器)
+        const trackLength = 12000;
+        let trackPoints = [];
+        let candlesticks = []; // 背景K線裝飾
+        
+        function generateMap(type) {
+            trackPoints = []; candlesticks = [];
+            let currentY = 500;
+            trackPoints.push({ x: 0, y: currentY });
+            
+            for (let i = 1; i <= 150; i++) {
+                let x = i * (trackLength / 150);
+                let openY = currentY;
+                
+                if (type === 'TSLA') { // 暴起暴落
+                    if (i < 30) currentY -= Math.random() * 15;
+                    else if (i < 50) currentY += Math.random() * 100; // 暴跌
+                    else if (i < 80) currentY += (Math.random() - 0.5) * 60; // 盤整
+                    else if (i < 110) currentY -= Math.random() * 80; // 暴噴
+                    else currentY += Math.random() * 50; 
+                } else if (type === 'NVDA') { // 穩健陡升 (Y越小越高)
+                    currentY -= Math.random() * 15;
+                    if(i % 10 === 0) currentY += Math.random() * 40; // 偶爾回調
+                } else if (type === 'GME') { // 死魚後沖天
+                    if (i < 100) currentY += (Math.random() - 0.5) * 10;
+                    else currentY -= Math.random() * 150; // 嘎空
+                }
+                
+                trackPoints.push({ x: x, y: currentY });
+                
+                // 生成假K線數據 (視覺用)
+                let closeY = currentY;
+                let highY = Math.min(openY, closeY) - Math.random() * 30;
+                let lowY = Math.max(openY, closeY) + Math.random() * 30;
+                candlesticks.push({ x: x - (trackLength/300), open: openY, close: closeY, high: highY, low: lowY });
+            }
+            document.getElementById('hud-stock-name').textContent = type;
+        }
+
+        function getTrackData(x) {
+            if (x <= 0) return { y: trackPoints[0].y, angle: 0 };
+            if (x >= trackLength) return { y: trackPoints[trackPoints.length-1].y, angle: 0 };
+            for (let i = 0; i < trackPoints.length - 1; i++) {
+                if (x >= trackPoints[i].x && x < trackPoints[i+1].x) {
+                    const p1 = trackPoints[i], p2 = trackPoints[i+1];
+                    const t = (x - p1.x) / (p2.x - p1.x);
+                    const y = p1.y + t * (p2.y - p1.y);
+                    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+                    return { y, angle };
+                }
+            }
+            return { y: 0, angle: 0 };
+        }
+
+        // 摩托車與難度系統
+        let bike = {
+            x: 50, y: 0, vx: 0, vy: 0, angle: 0, 
+            isGasBtnDown: false, heat: 0, overheated: false, heatTimer: 0,
+            isCrashed: false, crashTimer: 0, finished: false, finishTime: 0
+        };
+        let startTime = 0;
+
+        function resetBike() {
+            bike = { x: 50, y: trackPoints[0]?.y || 0, vx: 0, vy: 0, angle: 0, isGasBtnDown: false, heat: 0, overheated: false, heatTimer: 0, isCrashed: false, crashTimer: 0, finished: false, finishTime: 0 };
+            lastTime = 0;
+            UI.heatBar.style.width = '0%';
+            UI.heatPanel.classList.remove('overheated');
+            UI.heatWarning.classList.add('hidden');
+        }
+
+        // PeerJS 網路連線
+        function setupPeerEvents(targetPeer) {
+            targetPeer.on('open', (id) => {
+                myId = id;
+                players[myId] = { name: myName, x: 50, y: 0, rot: 0, color: myColor, finished: false };
+                updatePlayerList();
+                UI.displayId.textContent = id;
+                if(isHost) {
+                    UI.btnStart.classList.remove('hidden');
+                    UI.waitingText.classList.add('hidden');
+                }
+            });
+            targetPeer.on('error', (err) => {
+                showWarning("連線失敗，房號可能已被使用或無效！");
+                UI.lobby.classList.remove('hidden');
+                UI.waiting.classList.add('hidden');
+            });
+        }
+
+        document.getElementById('btnCreateRoom').onclick = () => {
+            if (!UI.nameInput.value.trim()) return showWarning('請輸入玩家 ID');
+            myName = UI.nameInput.value.trim();
+            localStorage.setItem('playerName', myName);
+            isHost = true;
+            currentStock = UI.stockSelect.value;
+            
+            const reqId = UI.customRoomId.value.trim() || undefined;
+            peer = new Peer(reqId, { debug: 1 });
+            
+            UI.joinOptions.classList.add('hidden');
+            UI.waiting.classList.remove('hidden');
+            setupPeerEvents(peer);
+
+            peer.on('connection', (conn) => {
+                connections.push(conn);
+                conn.on('data', (data) => handleHostData(conn, data));
+            });
+        };
+
+        document.getElementById('btnJoinRoom').onclick = () => {
+            if (!UI.nameInput.value.trim()) return showWarning('請輸入玩家 ID');
+            const roomId = UI.roomIdInput.value.trim();
+            if (!roomId) return showWarning('請輸入房號');
+            
+            myName = UI.nameInput.value.trim();
+            localStorage.setItem('playerName', myName);
+            isHost = false;
+            
+            peer = new Peer({ debug: 1 });
+            UI.joinOptions.classList.add('hidden');
+            UI.waiting.classList.remove('hidden');
+            setupPeerEvents(peer);
+
+            setTimeout(() => {
+                hostConnection = peer.connect(roomId);
+                hostConnection.on('open', () => {
+                    UI.displayId.textContent = roomId;
+                    hostConnection.send({ type: 'join', id: myId, name: myName, color: myColor });
+                });
+                hostConnection.on('data', (data) => handleClientData(data));
+            }, 1000);
+        };
+
+        UI.btnCopyLink.onclick = () => {
+            const url = window.location.origin + window.location.pathname + '?room=' + UI.displayId.textContent;
+            navigator.clipboard.writeText(url);
+            showWarning("✅ 邀請連結已複製！");
+        };
+
+        UI.btnStart.onclick = () => {
+            if (isHost) {
+                generateMap(currentStock);
+                connections.forEach(c => c.send({ type: 'start_game', stock: currentStock, track: trackPoints })); 
+                startGame();
+            }
+        };
+
+        UI.btnRematch.onclick = () => {
+            if (isHost) {
+                generateMap(UI.stockSelect.value); // 換地圖也可
+                connections.forEach(c => c.send({ type: 'rematch', stock: currentStock, track: trackPoints }));
+                prepareRematch();
+            }
+        };
+
+        function handleHostData(conn, data) {
+            if (data.type === 'join') {
+                players[data.id] = { name: data.name, x: 50, y: 0, rot: 0, color: data.color, finished: false };
+                updatePlayerList();
+                connections.forEach(c => c.send({ type: 'update_players', players: players }));
+            }
+            if (data.type === 'sync') {
+                if (players[data.id]) {
+                    players[data.id].x = data.x; players[data.id].rot = data.rot; players[data.id].finished = data.finished;
+                    if(data.finished && !players[data.id].finishTime) players[data.id].finishTime = data.time;
+                }
+            }
+        }
+
+        function handleClientData(data) {
+            if (data.type === 'update_players') { players = data.players; updatePlayerList(); }
+            if (data.type === 'start_game') { currentStock = data.stock; trackPoints = data.track; startGame(); }
+            if (data.type === 'rematch') { currentStock = data.stock; trackPoints = data.track; prepareRematch(); }
+            if (data.type === 'sync_all') {
+                for (let id in data.players) {
+                    if (id !== myId && players[id]) {
+                        players[id].x = data.players[id].x; players[id].rot = data.players[id].rot; 
+                        players[id].finished = data.players[id].finished; players[id].finishTime = data.players[id].finishTime;
+                    }
+                }
+            }
+        }
+
+        function updatePlayerList() {
+            UI.playerList.innerHTML = '';
+            for (let id in players) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span style="color:${players[id].color}">■</span> ${players[id].name} ${id===myId?'(你)':''}`;
+                UI.playerList.appendChild(li);
+            }
+        }
+
+        // 遊戲流程
+        function startGame() {
+            UI.container.classList.remove('bg-[#131722]', 'z-10');
+            UI.lobby.classList.add('hidden');
+            UI.result.classList.add('hidden');
+            UI.canvas.classList.remove('hidden');
+            UI.hud.classList.remove('hidden');
+            resetBike();
+            resizeCanvas();
+            startTime = Date.now();
+            
+            // 操作綁定
+            const pressGas = (e) => { if(e) e.preventDefault(); bike.isGasBtnDown = true; };
+            const releaseGas = (e) => { if(e) e.preventDefault(); bike.isGasBtnDown = false; };
+            
+            UI.btnGas.ontouchstart = pressGas; UI.btnGas.ontouchend = releaseGas;
+            UI.btnGas.onmousedown = pressGas; window.onmouseup = releaseGas;
+            window.onkeydown = (e) => { if(e.key === ' ' || e.key === 'ArrowRight') pressGas(); };
+            window.onkeyup = (e) => { if(e.key === ' ' || e.key === 'ArrowRight') releaseGas(); };
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function prepareRematch() {
+            for(let id in players) {
+                players[id].x = 50; players[id].finished = false; players[id].finishTime = 0;
+            }
+            startGame();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        function resizeCanvas() { UI.canvas.width = window.innerWidth; UI.canvas.height = window.innerHeight; }
+
+        // 繪製
+        function drawBike(x, y, angle, color, name, isMe) {
+            ctx.save();
+            if (isMe) {
+                ctx.translate(UI.canvas.width / 4, UI.canvas.height / 2 + 50); 
+                ctx.rotate(-angle * 0.3); // 降低鏡頭暈眩感
+            } else {
+                ctx.translate(UI.canvas.width / 4 + (x - bike.x), UI.canvas.height / 2 + 50 + (y - bike.y));
+            }
+            ctx.rotate(angle);
+
+            // ID標籤
+            ctx.fillStyle = color; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(name, 0, -35);
+
+            // 摩托車 (極簡風)
+            ctx.strokeStyle = color; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-6, -14); ctx.lineTo(8, -14); ctx.lineTo(14, 0); ctx.lineTo(-6, -4); ctx.closePath(); ctx.stroke();
+            ctx.fillStyle = '#131722'; ctx.strokeStyle = '#d1d4dc'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(-14, 0, 7, 0, Math.PI*2); ctx.fill(); ctx.stroke(); // 後輪
+            ctx.beginPath(); ctx.arc(14, 0, 7, 0, Math.PI*2); ctx.fill(); ctx.stroke(); // 前輪
+            
+            ctx.restore();
+        }
+
+        // TradingView 背景繪製
+        function drawTradingViewBackground() {
+            ctx.fillStyle = '#131722'; ctx.fillRect(0, 0, UI.canvas.width, UI.canvas.height);
+            
+            // 網格線
+            ctx.strokeStyle = '#1e222d'; ctx.lineWidth = 1;
+            const offsetX = (bike.x * 0.3) % 100;
+            for(let i=0; i<UI.canvas.width; i+=100) { ctx.beginPath(); ctx.moveTo(i - offsetX, 0); ctx.lineTo(i - offsetX, UI.canvas.height); ctx.stroke(); }
+            const offsetY = (bike.y * 0.3) % 60;
+            for(let j=0; j<UI.canvas.height; j+=60) { ctx.beginPath(); ctx.moveTo(0, j - offsetY); ctx.lineTo(UI.canvas.width, j - offsetY); ctx.stroke(); }
+            
+            // 浮水印
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.font = 'bold 120px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(currentStock, UI.canvas.width/2, UI.canvas.height/2);
+
+            // Y軸價格標籤 (裝飾用)
+            ctx.fillStyle = '#1e222d'; ctx.fillRect(UI.canvas.width - 60, 0, 60, UI.canvas.height);
+            ctx.fillStyle = '#878993'; ctx.font = '10px Arial'; ctx.textAlign = 'right';
+            for(let j=0; j<UI.canvas.height; j+=60) {
+                let simPrice = (800 - (bike.y + j - UI.canvas.height/2) / 2).toFixed(1);
+                ctx.fillText(simPrice, UI.canvas.width - 5, j - offsetY + 4);
+                ctx.beginPath(); ctx.moveTo(UI.canvas.width - 60, j - offsetY); ctx.lineTo(UI.canvas.width - 55, j - offsetY); ctx.strokeStyle='#878993'; ctx.stroke();
+            }
+
+            // 十字準星 (對準玩家)
+            ctx.strokeStyle = 'rgba(209, 212, 220, 0.2)'; ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(0, UI.canvas.height/2 + 50); ctx.lineTo(UI.canvas.width-60, UI.canvas.height/2 + 50); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(UI.canvas.width/4, 0); ctx.lineTo(UI.canvas.width/4, UI.canvas.height); ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // 核心迴圈 (包含 Delta Time 計算)
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            let dt = (timestamp - lastTime) / 1000; // 取得兩幀之間的時間差(秒)
+            lastTime = timestamp;
+            if (dt > 0.1) dt = 0.1; // 防止切換視窗回來後爆衝
+            
+            updatePhysics(dt);
+            drawGame();
+            syncNetwork();
+            checkFinish();
+
+            if (!bike.finished || isHost) {
+                gameLoopId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function updatePhysics(dt) {
+            if (bike.finished) return;
+
+            // 引擎過熱機制
+            if (bike.overheated) {
+                bike.heatTimer -= dt;
+                if (bike.heatTimer <= 0) {
+                    bike.overheated = false;
+                    UI.heatPanel.classList.remove('overheated');
+                    UI.heatWarning.classList.add('hidden');
+                }
+                bike.isGasBtnDown = false; // 強制放油門
+            } else {
+                if (bike.isGasBtnDown) {
+                    bike.heat += 40 * dt; // 按住累積熱量
+                    if (bike.heat >= 100) {
+                        bike.heat = 100;
+                        bike.overheated = true;
+                        bike.heatTimer = 2.0; // 熄火2秒
+                        UI.heatPanel.classList.add('overheated');
+                        UI.heatWarning.classList.remove('hidden');
+                    }
+                } else {
+                    bike.heat -= 60 * dt; // 放開快速散熱
+                    if (bike.heat < 0) bike.heat = 0;
+                }
+            }
+            // 更新熱量條 UI
+            UI.heatBar.style.width = bike.heat + '%';
+            UI.heatBar.style.background = bike.heat > 80 ? '#ef4444' : (bike.heat > 50 ? '#f59e0b' : '#10b981');
+
+            // 物理運動 (基準為 60fps, 所以乘以 60 來標準化常數)
+            let dtMultiplier = dt * 60; 
+
+            if (bike.isCrashed) {
+                bike.vx *= Math.pow(0.85, dtMultiplier);
+                bike.crashTimer -= dt;
+                if (bike.crashTimer <= 0) {
+                    bike.isCrashed = false;
+                    document.getElementById('crash-warning').classList.add('hidden');
+                }
+            } else {
+                const track = getTrackData(bike.x);
+                bike.y = track.y; 
+                
+                if (bike.isGasBtnDown) bike.vx += 0.25 * dtMultiplier;
+                else bike.vx *= Math.pow(0.96, dtMultiplier); // 自然減速
+
+                // 重力拉扯
+                const gravityImpact = Math.sin(track.angle) * 0.45 * dtMultiplier; 
+                bike.vx += gravityImpact;
+
+                // 速限
+                if (bike.vx > 18) bike.vx = 18;
+                if (bike.vx < -2) bike.vx = -2;
+
+                bike.x += bike.vx * Math.cos(track.angle) * dtMultiplier;
+                bike.angle = track.angle;
+
+                // 摔車判定 (下陡坡且速度過快)
+                if (track.angle > 0.9 && bike.vx > 10) { 
+                    bike.isCrashed = true;
+                    bike.crashTimer = 1.5; 
+                    bike.vx = 0;
+                    document.getElementById('crash-warning').classList.remove('hidden');
+                }
+            }
+
+            const progress = Math.min(100, Math.floor((bike.x / trackLength) * 100));
+            document.getElementById('hud-dist').textContent = `完成度: ${progress}%`;
+        }
+
+        function drawGame() {
+            drawTradingViewBackground();
+
+            ctx.save();
+            ctx.translate(UI.canvas.width / 4, UI.canvas.height / 2 + 50);
+            ctx.rotate(-bike.angle * 0.3); 
+
+            // 繪製背景 K 線裝飾
+            candlesticks.forEach(c => {
+                const screenX = c.x - bike.x;
+                if (screenX > -UI.canvas.width && screenX < UI.canvas.width * 1.5) {
+                    const color = c.close <= c.open ? '#089981' : '#f23645'; // 綠漲紅跌 (TradingView預設)
+                    ctx.strokeStyle = color; ctx.fillStyle = color;
+                    ctx.beginPath(); ctx.moveTo(screenX, c.high - bike.y); ctx.lineTo(screenX, c.low - bike.y); ctx.stroke();
+                    ctx.fillRect(screenX - 4, Math.min(c.open, c.close) - bike.y, 8, Math.abs(c.close - c.open) || 2);
+                }
+            });
+
+            // 繪製發光的主線(移動平均線)
+            ctx.beginPath();
+            ctx.lineWidth = 4;
+            ctx.lineJoin = "round";
+            for (let i = 0; i < trackPoints.length - 1; i++) {
+                const p1 = trackPoints[i], p2 = trackPoints[i+1];
+                const screenX = p1.x - bike.x;
+                if (screenX > -UI.canvas.width && screenX < UI.canvas.width * 1.5) {
+                    if(i === 0) ctx.moveTo(screenX, p1.y - bike.y);
+                    ctx.lineTo(p2.x - bike.x, p2.y - bike.y);
+                    
+                    const segmentColor = p2.y < p1.y ? '#089981' : '#f23645'; 
+                    ctx.strokeStyle = segmentColor;
+                    ctx.shadowColor = segmentColor; ctx.shadowBlur = 10;
+                    ctx.stroke(); ctx.shadowBlur = 0;
+                    
+                    ctx.beginPath(); ctx.moveTo(p2.x - bike.x, p2.y - bike.y);
+                }
+            }
+            
+            // 畫終點線
+            if (trackLength - bike.x < UI.canvas.width) {
+                ctx.fillStyle = '#d1d4dc';
+                const finishX = trackLength - bike.x;
+                ctx.fillRect(finishX, -300, 5, 600);
+                ctx.font = 'bold 20px Arial'; ctx.fillText('TAKE PROFIT', finishX, -100);
+            }
+            ctx.restore();
+
+            // 畫對手 (修復飄移：利用自己算出的 Y 值讓對手強制貼地)
+            for (let id in players) {
+                if (id !== myId) {
+                    const p = players[id];
+                    const trackY = getTrackData(p.x).y; // 強制鎖定在本地線圖的 Y
+                    drawBike(p.x, trackY, p.rot, p.color, p.name, false);
+                }
+            }
+
+            // 畫自己 (摔車閃爍)
+            if (bike.isCrashed && Math.floor(Date.now() / 100) % 2 === 0) {} 
+            else { drawBike(bike.x, bike.y, bike.angle, myColor, "你", true); }
+        }
+
+        function syncNetwork() {
+            if (Math.floor(Date.now() / 50) % 2 === 0) {
+                const myState = { type: 'sync', id: myId, x: bike.x, rot: bike.angle, finished: bike.finished, time: bike.finishTime };
+                if (isHost) {
+                    players[myId].x = bike.x; players[myId].rot = bike.angle; players[myId].finished = bike.finished;
+                    if(bike.finished && !players[myId].finishTime) players[myId].finishTime = bike.finishTime;
+                    connections.forEach(c => c.send({ type: 'sync_all', players: players }));
+                } else {
+                    if (hostConnection && hostConnection.open) hostConnection.send(myState);
+                }
+            }
+        }
+
+        function checkFinish() {
+            if (!bike.finished && bike.x >= trackLength) {
+                bike.finished = true;
+                bike.finishTime = Date.now() - startTime;
+                setTimeout(checkAllFinished, 1000);
+            }
+        }
+
+        function checkAllFinished() {
+            let allDone = true, results = [];
+            for (let id in players) {
+                if (!players[id].finished) allDone = false;
+                else results.push({ name: players[id].name, time: players[id].finishTime });
+            }
+
+            if (allDone && results.length > 0) {
+                showLeaderboard(results);
+            } else if (bike.finished) {
+                setTimeout(checkAllFinished, 1000); // 繼續等其他人
+            }
+        }
+
+        function showLeaderboard(results) {
+            cancelAnimationFrame(gameLoopId);
+            UI.hud.classList.add('hidden');
+            UI.container.classList.add('items-center', 'justify-center', 'bg-[rgba(19,23,34,0.95)]', 'z-10');
+            UI.result.classList.remove('hidden');
+
+            if (isHost) { UI.btnRematch.classList.remove('hidden'); UI.btnWaitRematch.classList.add('hidden'); } 
+            else { UI.btnRematch.classList.add('hidden'); UI.btnWaitRematch.classList.remove('hidden'); }
+
+            results.sort((a, b) => a.time - b.time);
+            UI.board.innerHTML = '';
+            
+            results.forEach((r, index) => {
+                const isLoser = index === results.length - 1;
+                const timeStr = (r.time / 1000).toFixed(2) + 's';
+                const el = document.createElement('div');
+                el.className = `flex justify-between p-3 rounded font-bold ${isLoser ? 'bg-[rgba(242,54,69,0.2)] text-[#f23645]' : 'bg-[#2a2e39] text-[#d1d4dc]'}`;
+                el.innerHTML = `<span>#${index + 1} ${r.name}</span> <span class="font-mono">${timeStr}</span>`;
+                UI.board.appendChild(el);
+                if (isLoser) UI.loserName.textContent = r.name;
+            });
+        }
+    </script>
+</body>
+</html>
