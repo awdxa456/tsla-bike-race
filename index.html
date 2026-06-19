@@ -250,6 +250,9 @@
             const pointsCount = 180;
             const stepX = trackLength / pointsCount;
             
+            // 加入起始日期，創造歷史共鳴感
+            let currentDate = new Date('2024-01-01');
+            
             for (let i = 0; i <= pointsCount; i++) {
                 let open = currentPrice;
                 let change = 0;
@@ -273,9 +276,15 @@
                 let low = Math.min(open, close) - Math.random() * 25;
                 let vol = Math.random() * 100 + (Math.abs(change) > 100 ? 200 : 0);
                 
-                candlesticks.push({ x: i * stepX, open, close, high, low });
+                // 產生 K線日期
+                let dateStr = currentDate.toISOString().split('T')[0];
+                
+                candlesticks.push({ x: i * stepX, open, close, high, low, date: dateStr });
                 volumes.push(vol);
                 currentPrice = close;
+                
+                // 推進日期 (略過假日，簡單加 1~2天)
+                currentDate.setDate(currentDate.getDate() + 1 + Math.floor(Math.random() * 2));
             }
 
             // 計算 5日均線 (MA5) 作為物理賽道
@@ -513,8 +522,8 @@
                 let trackAngle = trackInfo.angle;
 
                 if (!bike.isAirborne && bike.isGasBtnDown) {
-                    // 在地上且按油門，沿著斜坡加速
-                    let accel = 0.8 * dtMultiplier;
+                    // 在地上且按油門，沿著斜坡加速 (降速 30%)
+                    let accel = 0.55 * dtMultiplier;
                     bike.vx += accel * Math.cos(trackAngle);
                     bike.vy += accel * Math.sin(trackAngle);
                 }
@@ -541,11 +550,11 @@
                         let diff = Math.abs(nAngle - nTrackAngle);
                         if (diff > Math.PI) diff = 2 * Math.PI - diff; // 取最小夾角
                         
-                        // 落地角度偏差大於 90度 (約1.5弧度) -> 頭朝下落地，跌倒！
-                        if (diff > 1.5) {
+                        // 【難度暴增】落地角度偏差大於 35度 (約0.6弧度) 就會跌倒！不再容許亂跳
+                        if (diff > 0.6) {
                             bike.isCrashed = true;
                             bike.crashTimer = 1.0; // 爬起需要 1 秒
-                            bike.vx *= 0.3; // 摔車失去大部分動能
+                            bike.vx *= 0.1; // 摔車失去大部分動能
                             bike.vy = 0;
                             document.getElementById('crash-warning').classList.remove('hidden');
                         }
@@ -563,9 +572,9 @@
                         speedAlongTrack *= Math.pow(0.99, dtMultiplier); // 些微地面摩擦
                         if (!bike.isGasBtnDown) speedAlongTrack *= Math.pow(0.95, dtMultiplier); // 沒按油門就滑行減速
 
-                        // 速限
-                        if (speedAlongTrack > 28) speedAlongTrack = 28;
-                        if (speedAlongTrack < -5) speedAlongTrack = -5;
+                        // 【降速 30%】最高速限下修到 18，避免太快破關
+                        if (speedAlongTrack > 18) speedAlongTrack = 18;
+                        if (speedAlongTrack < -3) speedAlongTrack = -3;
 
                         bike.vx = speedAlongTrack * Math.cos(newTrackInfo.angle);
                         bike.vy = speedAlongTrack * Math.sin(newTrackInfo.angle);
@@ -573,11 +582,17 @@
                 } else {
                     // 在空中飛躍！
                     if (!bike.isAirborne) {
-                        // 剛起飛的瞬間，決定翻轉速度 (取決於起飛時的水平速度)
-                        bike.spinSpeed = bike.vx * 0.006; 
+                        // 剛起飛的瞬間，決定基礎翻轉速度
+                        bike.spinSpeed = bike.vx * 0.005; 
                     }
                     bike.isAirborne = true;
-                    // 在空中不斷翻轉 (加速越快，翻越多圈)
+                    
+                    // 【死亡懲罰】如果在空中還死按著 GO 鍵，車輛會瘋狂前空翻！
+                    if (bike.isGasBtnDown) {
+                        bike.spinSpeed += 0.003 * dtMultiplier;
+                    }
+                    
+                    // 在空中不斷翻轉
                     bike.angle += bike.spinSpeed * dtMultiplier;
                 }
             }
@@ -601,14 +616,16 @@
         // ==========================================
         // 繪圖引擎 (TradingView 介面與腳踏車)
         // ==========================================
+        const cameraZoom = 0.55; // 【畫面縮放係數】拉遠鏡頭，顯示宏觀 K 線
+
         function drawTradingViewChart() {
             // 背景與網格
             ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, UI.canvas.width, UI.canvas.height);
             
             ctx.strokeStyle = '#f0f3fa'; ctx.lineWidth = 1;
-            const offsetX = (bike.x * 0.6) % 150;
+            const offsetX = (bike.x * cameraZoom) % 150;
             for(let i=0; i<UI.canvas.width; i+=150) { ctx.beginPath(); ctx.moveTo(i - offsetX, 0); ctx.lineTo(i - offsetX, UI.canvas.height); ctx.stroke(); }
-            const offsetY = (bike.y * 0.6) % 80;
+            const offsetY = (bike.y * cameraZoom) % 80;
             for(let j=0; j<UI.canvas.height; j+=80) { ctx.beginPath(); ctx.moveTo(0, j - offsetY); ctx.lineTo(UI.canvas.width, j - offsetY); ctx.stroke(); }
             
             // 浮水印
@@ -617,24 +634,25 @@
             ctx.fillText(currentStock, UI.canvas.width/2, UI.canvas.height/2);
 
             ctx.save();
-            // 攝影機對焦
+            // 攝影機對焦與全局縮放
             ctx.translate(UI.canvas.width / 4, UI.canvas.height / 2 + 50);
+            ctx.scale(cameraZoom, cameraZoom);
             
             // 1. 繪製底部成交量 (Volume)
             candlesticks.forEach((c, idx) => {
                 const screenX = c.x - bike.x;
-                if (screenX > -UI.canvas.width && screenX < UI.canvas.width * 1.5) {
+                if (screenX * cameraZoom > -UI.canvas.width && screenX * cameraZoom < UI.canvas.width * 1.5) {
                     const color = c.close >= c.open ? 'rgba(8, 153, 129, 0.3)' : 'rgba(242, 54, 69, 0.3)';
                     const vHeight = volumes[idx] * 0.5;
                     ctx.fillStyle = color;
-                    ctx.fillRect(screenX - 6, UI.canvas.height/2 - vHeight - bike.y + 200, 12, vHeight);
+                    ctx.fillRect(screenX - 6, UI.canvas.height/2 - vHeight - bike.y + 400, 12, vHeight);
                 }
             });
 
             // 2. 繪製巨大 K 線棒
             candlesticks.forEach(c => {
                 const screenX = c.x - bike.x;
-                if (screenX > -UI.canvas.width && screenX < UI.canvas.width * 1.5) {
+                if (screenX * cameraZoom > -UI.canvas.width && screenX * cameraZoom < UI.canvas.width * 1.5) {
                     const isUp = c.close >= c.open;
                     const color = isUp ? '#089981' : '#f23645'; 
                     // 影線 (High/Low)
@@ -645,42 +663,65 @@
                     let bodyTop = 700 - Math.max(c.open, c.close) - bike.y;
                     let bodyHeight = Math.abs(c.close - c.open);
                     if(bodyHeight < 2) bodyHeight = 2; // 十字線防護
-                    ctx.fillRect(screenX - 8, bodyTop, 16, bodyHeight);
+                    ctx.fillRect(screenX - 12, bodyTop, 24, bodyHeight); // 加粗 K 線
                 }
             });
 
             // 3. 繪製 5 日均線賽道 (MA Track)
             ctx.beginPath();
-            ctx.lineWidth = 6;
+            ctx.lineWidth = 8;
             ctx.lineJoin = "round";
             for (let i = 0; i < maPoints.length - 1; i++) {
                 const p1 = maPoints[i], p2 = maPoints[i+1];
                 const screenX = p1.x - bike.x;
-                if (screenX > -UI.canvas.width && screenX < UI.canvas.width * 1.5) {
+                if (screenX * cameraZoom > -UI.canvas.width && screenX * cameraZoom < UI.canvas.width * 1.5) {
                     if(i === 0) ctx.moveTo(screenX, p1.y - bike.y);
                     ctx.lineTo(p2.x - bike.x, p2.y - bike.y);
                 }
             }
             // 讓均線有漂亮的光暈
             ctx.strokeStyle = '#2962ff'; 
-            ctx.shadowColor = 'rgba(41, 98, 255, 0.4)'; ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(41, 98, 255, 0.4)'; ctx.shadowBlur = 15;
             ctx.stroke(); ctx.shadowBlur = 0;
             
             // 畫終點線
-            if (trackLength - bike.x < UI.canvas.width) {
+            if ((trackLength - bike.x) * cameraZoom < UI.canvas.width) {
                 const finishX = trackLength - bike.x;
                 ctx.fillStyle = '#131722';
-                ctx.fillRect(finishX, -1000 - bike.y, 10, 2000);
-                ctx.font = 'bold 24px Arial'; ctx.fillText('TAKE PROFIT (終點)', finishX, -200 - bike.y);
+                ctx.fillRect(finishX, -2000 - bike.y, 15, 4000);
+                ctx.font = 'bold 48px Arial'; ctx.fillText('TAKE PROFIT (終點)', finishX, -200 - bike.y);
             }
             ctx.restore();
 
+            // =========================
+            // 繪製日期 X 軸 (底部時間線)
+            // =========================
+            ctx.fillStyle = '#ffffff'; 
+            ctx.fillRect(0, UI.canvas.height - 30, UI.canvas.width, 30);
+            ctx.strokeStyle = '#e0e3eb'; ctx.beginPath(); ctx.moveTo(0, UI.canvas.height - 30); ctx.lineTo(UI.canvas.width, UI.canvas.height - 30); ctx.stroke();
+            
+            ctx.fillStyle = '#787b86'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            let lastDrawnMonth = ""; 
+            candlesticks.forEach(c => {
+                const screenX = (c.x - bike.x) * cameraZoom + UI.canvas.width / 4;
+                if (screenX > 0 && screenX < UI.canvas.width) {
+                    const dateParts = c.date.split('-');
+                    const monthKey = `${dateParts[0]}-${dateParts[1]}`;
+                    // 每個月只畫一次大標籤
+                    if (monthKey !== lastDrawnMonth) {
+                        ctx.beginPath(); ctx.moveTo(screenX, UI.canvas.height - 30); ctx.lineTo(screenX, UI.canvas.height - 25); ctx.stroke();
+                        ctx.fillText(`${dateParts[0]}年${dateParts[1]}月`, screenX, UI.canvas.height - 15);
+                        lastDrawnMonth = monthKey;
+                    }
+                }
+            });
+
             // 右側 Y 軸刻度
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(UI.canvas.width - 60, 50, 60, UI.canvas.height);
-            ctx.strokeStyle = '#e0e3eb'; ctx.beginPath(); ctx.moveTo(UI.canvas.width - 60, 50); ctx.lineTo(UI.canvas.width - 60, UI.canvas.height); ctx.stroke();
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(UI.canvas.width - 60, 50, 60, UI.canvas.height - 80);
+            ctx.strokeStyle = '#e0e3eb'; ctx.beginPath(); ctx.moveTo(UI.canvas.width - 60, 50); ctx.lineTo(UI.canvas.width - 60, UI.canvas.height - 30); ctx.stroke();
             ctx.fillStyle = '#131722'; ctx.font = '11px Arial'; ctx.textAlign = 'right';
             for(let j=0; j<UI.canvas.height; j+=80) {
-                let simPrice = (700 - (bike.y + j - UI.canvas.height/2 - 50)).toFixed(1);
+                let simPrice = (700 - (bike.y + (j - UI.canvas.height/2 - 50) / cameraZoom)).toFixed(1);
                 ctx.fillText(simPrice, UI.canvas.width - 8, j - offsetY + 4 + 50);
             }
         }
@@ -691,53 +732,55 @@
             if (isMe) {
                 ctx.translate(UI.canvas.width / 4, UI.canvas.height / 2 + 50); 
             } else {
-                ctx.translate(UI.canvas.width / 4 + (x - bike.x), UI.canvas.height / 2 + 50 + (y - bike.y));
+                ctx.translate(UI.canvas.width / 4 + (x - bike.x) * cameraZoom, UI.canvas.height / 2 + 50 + (y - bike.y) * cameraZoom);
             }
+            
+            ctx.scale(cameraZoom, cameraZoom);
             ctx.rotate(angle);
 
             // 名字 ID
-            ctx.fillStyle = color; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText(name, 0, -45);
+            ctx.fillStyle = color; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(name, 0, -60);
 
             // 車身線條
-            ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
             
             // 輪胎
-            ctx.beginPath(); ctx.arc(-14, -6, 6, 0, Math.PI*2); ctx.stroke(); // 後輪
-            ctx.beginPath(); ctx.arc(14, -6, 6, 0, Math.PI*2); ctx.stroke(); // 前輪
+            ctx.beginPath(); ctx.arc(-22, -10, 10, 0, Math.PI*2); ctx.stroke(); // 後輪
+            ctx.beginPath(); ctx.arc(22, -10, 10, 0, Math.PI*2); ctx.stroke(); // 前輪
             
             // 車架
             ctx.beginPath();
-            ctx.moveTo(-14, -6); // 後輪心
-            ctx.lineTo(-4, -20); // 座椅管
-            ctx.lineTo(8, -20);  // 上管
-            ctx.lineTo(14, -6);  // 前叉
-            ctx.moveTo(8, -20);
-            ctx.lineTo(0, -6);   // 下管
-            ctx.lineTo(-14, -6); // 後下叉
+            ctx.moveTo(-22, -10); // 後輪心
+            ctx.lineTo(-6, -30); // 座椅管
+            ctx.lineTo(12, -30);  // 上管
+            ctx.lineTo(22, -10);  // 前叉
+            ctx.moveTo(12, -30);
+            ctx.lineTo(0, -10);   // 下管
+            ctx.lineTo(-22, -10); // 後下叉
             ctx.stroke();
             
             // 把手與坐墊
-            ctx.beginPath(); ctx.moveTo(-6, -20); ctx.lineTo(-2, -20); ctx.lineWidth = 4; ctx.stroke(); // 坐墊
-            ctx.beginPath(); ctx.moveTo(8, -20); ctx.lineTo(6, -26); ctx.lineTo(10, -26); ctx.lineWidth = 3; ctx.stroke(); // 把手
+            ctx.beginPath(); ctx.moveTo(-10, -30); ctx.lineTo(-2, -30); ctx.lineWidth = 6; ctx.stroke(); // 坐墊
+            ctx.beginPath(); ctx.moveTo(12, -30); ctx.lineTo(10, -40); ctx.lineTo(16, -40); ctx.lineWidth = 5; ctx.stroke(); // 把手
 
             // 騎士火柴人
-            ctx.strokeStyle = '#131722'; ctx.fillStyle = '#131722'; ctx.lineWidth = 3;
+            ctx.strokeStyle = '#131722'; ctx.fillStyle = '#131722'; ctx.lineWidth = 5;
             
             if (isCrashed) {
                 // 跌倒狀態：火柴人掛在車把上或扭曲
-                ctx.translate(5, -10);
+                ctx.translate(10, -15);
                 ctx.rotate(Math.PI / 2);
             }
             
             // 頭
-            ctx.beginPath(); ctx.arc(0, -35, 4.5, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, -55, 7, 0, Math.PI*2); ctx.fill();
             // 身體
-            ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(-3, -20); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, -48); ctx.lineTo(-4, -30); ctx.stroke();
             // 手臂
-            ctx.beginPath(); ctx.moveTo(0, -28); ctx.lineTo(8, -26); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, -42); ctx.lineTo(12, -40); ctx.stroke();
             // 腿
-            ctx.beginPath(); ctx.moveTo(-3, -20); ctx.lineTo(0, -12); ctx.lineTo(0, -6); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-4, -30); ctx.lineTo(0, -20); ctx.lineTo(0, -10); ctx.stroke();
 
             ctx.restore();
         }
