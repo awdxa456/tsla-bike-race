@@ -187,87 +187,45 @@
         
         const myColor = ["#2962ff", "#f23645", "#089981", "#ff9800", "#9c27b0", "#e91e63"][Math.floor(Math.random()*6)];
         
-        // 擴充至 200 句迷因金句資料庫
+        // 中文迷因金句資料庫
         const memeQuotes = [
-            // WSB & 經典交易韭菜語錄
-            "Buy high, sell low!", "Diamond hands! 💎🙌", "To the moon?! 🚀", "Margin called... 📉",
-            "Wendy's dumpster here I come.", "It's just a dip... right?", "HODL!", "My wife's boyfriend is mad.",
-            "Stop loss triggered.", "Aaaand it's gone.", "GUH.", "Stonks only go up!",
-            "Printer goes brrrr", "I am never financially recovering.", "Buy the dip they said...",
-            "It's priced in.", "Short squeeze incoming!", "Paper hands...", "Should have bought NVDA.",
-            "Bulls make money, bears make money...",
-            
-            // 馬斯克 & 特斯拉 & SpaceX 梗
-            "Funding secured at 420.", "Where is my Cybercab?", "FSD next year, I swear!", "Mars is looking far today.",
-            "Dogecoin to $1!", "Did Elon tweet again?!", "Optimus, save my portfolio!", "Taking TSLA private.",
-            "Burnt hair perfume?", "SpaceX exploded my savings.", "My Cybertruck is rusting!", "Giga Texas is burning money.",
-            "Elon, please stop tweeting.", "I bought TSLA at $400...", "Starlink connection lost.",
-            "Robotaxi is delayed... again.", "X.com bankrupts me.", "Pay this meal in Doge?",
-            "Master Plan Part 4: Margin Call.", "Another stock split will fix it.",
-            
-            // 崩潰與絕望
-            "F**k, give my money back!!", "Where is my Lambo?!", "I blame the Fed.", "Powell, why raise rates?!",
-            "Just one more green candle...", "I am a long-term investor now.", "Not a loss if you don't sell.",
-            "Averaging down... forever.", "Mom, can I borrow $100?", "Is market open on weekends?",
-            "I thought this was a casino.", "Sir, this is a Wendy's.", "My portfolio is a horror movie.",
-            "Red is my favorite color anyway.", "I'm deleting my trading app.", "Can I refund my stocks?",
-            "What is diversification?", "YOLO'd my life savings.", "I miss 2020.", "Cathie Wood betrayed me.",
-            
-            // 幣圈與專有名詞嘲諷
-            "Wen Lambo?", "Wen moon?", "Rekt.", "Liquidated.", "Copium overdose.", "Hopium running out.",
-            "This is fine. 🔥", "Buying the top is an art.", "Catching falling knives.", "Dead cat bounce.",
-            "Bull trap!", "Bear trap!", "Theta gang took my money.", "0DTE options destroyed me.",
-            "I am the exit liquidity.", "Exit liquidity right here.", "Stop loss hunting.",
-            "Why did I listen to Jim Cramer?!", "Inverse Cramer never fails.", "I should have bought VOO.",
-            
-            // 隨機胡言亂語與更多絕望
-            "I hate money.", "Poverty builds character.", "Can I write this off my taxes?",
-            "Wall Street stole my lunch money.", "Working at McDonald's tomorrow.", "Need a sugar mommy now.",
-            "Selling my kidney for TSLA.", "Who needs retirement anyway?", "I will work until I'm 90.",
-            "At least I have my health...", "Heart rate is tracking the chart.", "Please let me break even.",
-            "I'll never trade again. (Lies)", "Just one good trade needed.", "Professional bag holder.",
-            "Heavy bags today.", "My arms are tired from holding bags.", "Can someone turn off the market?",
-            "I want a refund.", "Game over.", "Buy the rumor, sell the news.", "Time in the market...",
-            "Be greedy when others are fearful.", "I am very fearful right now.", "Apes together strong! 🦍",
-            "I like the stock.", "Short ladders!", "Naked shorting!", "SEC, do your job!",
-            "Call my broker immediately.", "Broker app is down again.", "Robinhood disabled the buy button.",
-            "I'm moving to a tax haven.", "Is bankruptcy an option?", "Just filed for Chapter 11.",
-            "My cat picks better stocks.", "Astrology for men (TA).", "Look at this head and shoulders!",
-            "Support level broken.", "Resistance is too strong.", "MACD crossed bearish.", "RSI is oversold!",
-            "Fibonacci says it will bounce.", "Trust me bro.", "My insider source lied.", "Cramer said it's a buy.",
-            "DCA all the way down.", "Averaging down into oblivion.", "My portfolio is 99% red.",
-            "Can I pay rent with exposure?", "Should have bought real estate.", "Cash is trash?",
-            "Inflation is eating my money.", "Soft landing they said.", "Recession canceled?",
-            "Yield curve inverted again.", "I don't even know what a bond is.", "Options are just gambling.",
-            "Theta decay is real.", "Gamma squeeze!", "IV crush ruined my calls.", "Selling puts on margin.",
-            "NVIDIA save us all.", "Jensen Huang sign my GPU.", "AI will fix my portfolio.",
-            "Sam Altman took my job.", "ChatGPT, how to get rich?", "Bitcoin fixes this.",
-            "Satoshi, please return.", "Not your keys, not your coins.", "I lost my hardware wallet.",
-            "FTX took my funds.", "SBF is in jail, I am in debt.", "Luna to zero.", "SafeMoon wasn't safe.",
-            "Minting NFTs to pay rent.", "My Bored Ape is worthless.", "Web3 is the future... right?",
-            "Metaverse real estate baron.", "Zuck, pump META please.", "Tim Apple, release the car.",
-            "Buying AAPL at the top.", "Warren Buffett is laughing at me.", "Charlie Munger was right.",
-            "Index funds are too boring.", "I need 1000% returns.", "Get rich quick scheme failed.",
-            "Is it too late to buy?", "Fear of Missing Out (FOMO).", "Panic sold the bottom.",
-            "Revenge trading right now.", "Emotions are controlling me.", "I need a financial advisor.",
-            "Divorced over a margin call.", "Sleeping on the couch tonight.", "Ramen noodles for dinner.",
-            "Water and sleep for dinner.", "Cancel Netflix to buy more shares.", "My net worth is a meme.",
-            "Generational wealth... gone.", "Building generational debt.", "I am the black sheep now.",
-            "Family dinner will be awkward.", "Don't ask about my investments.", "Yes mom, I'm doing fine.",
-            "Fake it till you make it.", "I drive a Toyota now.", "Selling the Lambo.",
-            "Bus pass secured.", "Walking to work.", "My shoes have holes.",
-            "I sold my TV for shares.", "At least the charts look pretty.", "Candlesticks give me nightmares.",
-            "Green means go... down?", "Red is a festive color.", "Christmas came early (for bears).",
-            "Santa rally is a lie.", "Sell in May and go away.", "September effect is real.",
-            "Market manipulation!", "The system is rigged.", "Whales are dumping.",
-            "Retail is always the victim.", "I am a retail peasant.", "Institutional money wins again.",
-            "Dark pools!", "Payment for Order Flow.", "I am the product.",
-            "Just close the app.", "Delete the app, problem solved.", "If I don't look, I didn't lose.",
-            "Schrödinger's portfolio.", "Ignorance is bliss.", "Checking my phone every 5 seconds.",
-            "Screen time: 18 hours.", "My eyes hurt.", "Stress level: 10000.",
-            "I need a vacation.", "Can't afford a vacation.", "Staycation it is.",
-            "Maybe I should start a YouTube channel.", "Financial guru in the making.", "Buy my course!",
-            "Smash that like button.", "Not financial advice.", "Do your own research (DYOR)."
+            // 股市韭菜與崩盤梗
+            "救命！我的本金在燃燒！", "不是虧損，是長期投資。", "我只是想賺便當錢。", "怎麼又套在山頂？",
+            "這不是下跌，這是打折。", "拜託讓我解套就好。", "我剛買就崩給我看？", "主力是不是在看我帳戶？",
+            "停損？我沒有那種東西。", "紅 K 只存在夢裡。", "我宣布今天開始存股。", "早知道買台積電。",
+            "我不是韭菜，我是高級韭菜。", "再跌我就刪 APP。", "看不見損益就沒有虧。", "這根綠棒是在開玩笑吧？",
+            "我已經跟股票結婚了。", "別問，問就是攤平。", "加碼一時爽，套牢火葬場。", "我需要財富自由，不是財富失蹤。",
+
+            // 特斯拉與馬斯克梗
+            "馬斯克你又發文了嗎？", "FSD 明年一定會來。", "我的 Cybertruck 呢？", "火星可以退貨嗎？",
+            "這餐可以用狗狗幣付嗎？", "特斯拉救救我的帳戶！", "我買在 420，不要問。", "機器人先救我的股票。",
+            "Robotaxi 又延後了嗎？", "星鏈斷線，我也斷頭。", "今天不是電動車，是電動跌。", "Elon，拜託先不要推文。",
+
+            // 台灣投資人日常
+            "早知道買 0050。", "早知道買高股息。", "這檔可以存股嗎？", "除息前買，除息後哭。",
+            "我只是路過，怎麼變股東？", "法人買我就買，法人賣我才知道。", "投信救我！", "外資又倒貨了。",
+            "隔日沖不要來！", "這量是不是怪怪的？", "主力你出來面對。", "我看籌碼很乾淨，結果是我很乾淨。",
+            "融資水位好像有點高。", "老師說會噴。", "群組說目標價一百。", "我只是試單，怎麼滿倉了？",
+
+            // 技術分析吐槽
+            "支撐破了，信仰也破了。", "壓力太大，我也是。", "RSI 超賣了，我也超累。", "MACD 翻黑，人生也翻黑。",
+            "黃金交叉呢？怎麼變死亡交叉？", "這是洗盤，對吧？", "這不是破線，是主力測試我。", "均線都救不了我。",
+            "K 線畫得很漂亮，帳戶很難看。", "這根影線是在嘲笑我。", "量縮整理，整理我的人生。", "突破是假，套牢是真。",
+
+            // 迷因與絕望
+            "我討厭錢，所以它離開我。", "財富自由改成財富自流。", "今天晚餐吃泡麵。", "水煮蛋加碼失敗。",
+            "我的退休金在這裡翻車。", "我媽叫我不要亂買。", "我需要一個有錢乾爹。", "賠錢使人成熟。",
+            "這不是股市，這是遊樂園大怒神。", "誰把市場關掉一下？", "我的心跳跟 K 線同步。", "我現在很冷靜，只是手在抖。",
+            "我再也不交易了，明天開始。", "最後一次加碼，真的。", "我只是想回本。", "回本就是勝利。",
+
+            // 幣圈 / 高槓桿梗
+            "爆倉通知比鬧鐘準。", "槓桿開太大，人生變太小。", "不是我的幣，是交易所的幣。", "錢包不見，信仰還在。",
+            "老師說這是百倍幣。", "我成為流動性本人。", "我不是追高，我是支持夢想。", "山寨幣教我做人。",
+            "合約讓我提早理解人生。", "空軍起飛，我先墜機。", "多軍集合，結果集合在山頂。", "這波不是牛市，是牛排我吃不起。",
+
+            // 結帳懲罰梗
+            "輸的人去結帳。", "這局我請？我先跌倒。", "我不是最後一名，我是負責買單。", "老闆，這桌算他的。",
+            "跑輸市場，還要跑去櫃台。", "帳單比股價還刺激。", "今天不是賺價差，是付價差。", "我用停損換一頓飯。"
         ];
 
         // 賽道資料
@@ -342,8 +300,8 @@
                 memeTriggerXs: [], isMemeFrozen: false, memeTimer: 0, memeText: ""
             };
             
-            // 每一場保證觸發 1 到 3 次崩潰迷因
-            let memeCount = Math.floor(Math.random() * 3) + 1;
+            // 每一場保證觸發 2 到 6 次迷因，頻率約為原本兩倍
+            let memeCount = Math.floor(Math.random() * 5) + 2;
             for(let i = 0; i < memeCount; i++) {
                 // 隨機分配在賽道 10% ~ 90% 的位置
                 bike.memeTriggerXs.push(trackLength * (0.1 + Math.random() * 0.8));
