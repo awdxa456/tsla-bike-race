@@ -699,6 +699,8 @@
             }
 
             ctx.rotate(angle);
+            const riderScale = 2;
+            ctx.scale(riderScale, riderScale);
 
             // 名字 ID (所有人都顯示名字，上移至 -110 避開頭部)
             ctx.fillStyle = color; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
