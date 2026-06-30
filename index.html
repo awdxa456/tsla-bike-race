@@ -19,10 +19,16 @@
         
         .control-btn {
             background: #ffffff; border: 2px solid #2962ff; color: #2962ff;
-            border-radius: 50%; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center;
-            font-size: 28px; font-weight: 900; box-shadow: 0 4px 15px rgba(41, 98, 255, 0.2); transition: all 0.05s ease;
+            border-radius: 50%; width: 82px; height: 82px; display: flex; align-items: center; justify-content: center;
+            font-size: 26px; font-weight: 900; box-shadow: 0 4px 15px rgba(41, 98, 255, 0.2); transition: all 0.05s ease;
         }
         .control-btn:active { background: #2962ff; color: #ffffff; transform: scale(0.9); }
+
+        @media (max-width: 640px) {
+            .control-btn { width: 68px; height: 68px; font-size: 21px; box-shadow: 0 3px 10px rgba(41, 98, 255, 0.22); }
+            #game-hud > div:first-child { margin-top: 54px; margin-left: 10px; margin-right: 10px; }
+            #game-hud > div:last-child { padding: 0 14px 18px 14px; }
+        }
 
         .tv-toolbar { background-color: #ffffff; border-color: #e0e3eb; }
         .tv-icon { width: 24px; height: 24px; fill: #787b86; cursor: pointer; transition: fill 0.2s; }
@@ -51,7 +57,7 @@
                 <svg class="tv-icon" viewBox="0 0 28 28"><path d="M11 9h6v1h-6V9zm0 4h6v1h-6v-1zm0 4h6v1h-6v-1zM8 7h12v14H8V7zm1 1v12h10V8H9z" fill-rule="evenodd"/></svg>
             </div>
         </div>
-        <div class="flex items-center space-x-4 text-sm font-mono text-[#787b86]">
+        <div class="hidden sm:flex items-center space-x-4 text-sm font-mono text-[#787b86]">
             <span>O:<span id="tv-o" class="text-[#131722]">0.00</span></span>
             <span>H:<span id="tv-h" class="text-[#131722]">0.00</span></span>
             <span>L:<span id="tv-l" class="text-[#131722]">0.00</span></span>
@@ -259,7 +265,48 @@
         
         // 攝影機物件 (相對於世界座標)
         let camera = { x: 0, y: 0 };
-        const cameraZoom = 0.55;
+        let cameraZoom = 0.7;
+        let riderScale = 1.35;
+        let audioCtx = null;
+        let audioReady = false;
+
+        function updateResponsiveScale() {
+            const isPhone = window.innerWidth <= 640;
+            // 手機用較近鏡頭，讓股票線圖與車手都更有存在感；桌機保留較廣視野
+            cameraZoom = isPhone ? 0.82 : 0.68;
+            riderScale = isPhone ? 1.35 : 1.45;
+        }
+
+        function unlockAudio() {
+            if (audioReady) return;
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            audioCtx = audioCtx || new AC();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            audioReady = true;
+        }
+
+        function playScream(type = 'meme') {
+            if (!audioReady || !audioCtx) return;
+            const now = audioCtx.currentTime;
+            const duration = type === 'crash' ? 0.62 : 0.38;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(type === 'crash' ? 1350 : 1050, now);
+            filter.Q.value = 5;
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(type === 'crash' ? 950 : 740, now);
+            osc.frequency.exponentialRampToValueAtTime(type === 'crash' ? 240 : 420, now + duration);
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(type === 'crash' ? 0.18 : 0.11, now + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+            osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(now); osc.stop(now + duration);
+        }
+
+        updateResponsiveScale();
 
         function generateMap() {
             candlesticks = []; maPoints = []; volumes = [];
@@ -490,7 +537,7 @@
         }
 
         window.addEventListener('resize', resizeCanvas);
-        function resizeCanvas() { UI.canvas.width = window.innerWidth; UI.canvas.height = window.innerHeight; }
+        function resizeCanvas() { UI.canvas.width = window.innerWidth; UI.canvas.height = window.innerHeight; updateResponsiveScale(); }
 
         function updatePhysics(dt) {
             if (bike.finished) return;
@@ -503,6 +550,7 @@
                 bike.memeTimer = 1.5; // 定格 1.5 秒
                 bike.memeText = memeQuotes[Math.floor(Math.random() * memeQuotes.length)];
                 bike.vx = 0; bike.vy = 0;
+                playScream('meme');
             }
 
             if (bike.isMemeFrozen) {
@@ -545,6 +593,7 @@
                             bike.isCrashed = true;
                             bike.crashTimer = 1.0; 
                             bike.vx *= 0.1; bike.vy = 0;
+                            playScream('crash');
                             document.getElementById('crash-warning').classList.remove('hidden');
                         }
                     }
@@ -588,10 +637,12 @@
 
         function drawTradingViewChart() {
             // 平滑更新世界相機 (鎖定玩家為中心稍微偏左)
-            let targetCamX = bike.x - (UI.canvas.width * 0.3) / cameraZoom;
-            let targetCamY = bike.y - (UI.canvas.height * 0.4) / cameraZoom;
-            // 防止相機超出起點
-            if (targetCamX < 0) targetCamX = 0; 
+            const isPhone = UI.canvas.width <= 640;
+            let targetCamX = bike.x - (UI.canvas.width * (isPhone ? 0.34 : 0.3)) / cameraZoom;
+            let targetCamY = bike.y - (UI.canvas.height * (isPhone ? 0.56 : 0.45)) / cameraZoom;
+            // 手機起跑時保留左側安全邊界，避免角色與名字被裁切
+            const minCamX = isPhone ? -150 : -80;
+            if (targetCamX < minCamX) targetCamX = minCamX; 
 
             camera.x += (targetCamX - camera.x) * 0.1;
             camera.y += (targetCamY - camera.y) * 0.1;
@@ -612,38 +663,44 @@
             
             // 2. 浮水印
             ctx.fillStyle = 'rgba(240, 243, 250, 0.8)';
-            ctx.font = 'bold 200px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.font = `bold ${UI.canvas.width <= 640 ? 150 : 200}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText("TSLA", left + (right - left)/2, top + (bottom - top)/2);
 
             // 3. 繪製底部成交量與 K 線
+            const isPhoneChart = UI.canvas.width <= 640;
+            const candleBodyW = isPhoneChart ? 34 : 24;
+            const candleWickW = isPhoneChart ? 3.5 : 2;
+            const volumeW = isPhoneChart ? 18 : 12;
             candlesticks.forEach((c, idx) => {
                 if (c.x > left - 100 && c.x < right + 100) {
                     const isUp = c.close >= c.open;
                     const color = isUp ? '#089981' : '#f23645'; 
                     const vHeight = volumes[idx] * 0.5;
                     ctx.fillStyle = isUp ? 'rgba(8, 153, 129, 0.3)' : 'rgba(242, 54, 69, 0.3)';
-                    ctx.fillRect(c.x - 6, 1100 - vHeight, 12, vHeight); // 量
+                    ctx.fillRect(c.x - volumeW / 2, 1100 - vHeight, volumeW, vHeight); // 量
                     
-                    ctx.strokeStyle = color; ctx.lineWidth = 2;
+                    ctx.strokeStyle = color; ctx.lineWidth = candleWickW;
                     ctx.beginPath(); ctx.moveTo(c.x, 700 - c.high); ctx.lineTo(c.x, 700 - c.low); ctx.stroke(); // 影線
                     
                     ctx.fillStyle = color;
                     let bodyTop = 700 - Math.max(c.open, c.close);
                     let bodyHeight = Math.max(2, Math.abs(c.close - c.open));
-                    ctx.fillRect(c.x - 12, bodyTop, 24, bodyHeight); // 實體
+                    ctx.fillRect(c.x - candleBodyW / 2, bodyTop, candleBodyW, bodyHeight); // 實體
                 }
             });
 
-            // 4. 繪製 5 日均線賽道
-            ctx.beginPath(); ctx.lineWidth = 8; ctx.lineJoin = "round";
-            for (let i = 0; i < maPoints.length - 1; i++) {
-                if (maPoints[i].x > left - 200 && maPoints[i].x < right + 200) {
-                    if(i === 0 || maPoints[i-1].x <= left - 200) ctx.moveTo(maPoints[i].x, maPoints[i].y);
-                    ctx.lineTo(maPoints[i+1].x, maPoints[i+1].y);
+            // 4. 繪製 5 日均線賽道：先畫深色底軌，再畫藍色主軌，讓車手看起來真的騎在線上
+            const drawTrackLine = () => {
+                ctx.beginPath(); ctx.lineJoin = "round"; ctx.lineCap = "round";
+                for (let i = 0; i < maPoints.length - 1; i++) {
+                    if (maPoints[i].x > left - 200 && maPoints[i].x < right + 200) {
+                        if(i === 0 || maPoints[i-1].x <= left - 200) ctx.moveTo(maPoints[i].x, maPoints[i].y);
+                        ctx.lineTo(maPoints[i+1].x, maPoints[i+1].y);
+                    }
                 }
-            }
-            ctx.strokeStyle = '#2962ff'; ctx.shadowColor = 'rgba(41, 98, 255, 0.4)'; ctx.shadowBlur = 15;
-            ctx.stroke(); ctx.shadowBlur = 0;
+            };
+            drawTrackLine(); ctx.lineWidth = isPhoneChart ? 20 : 16; ctx.strokeStyle = 'rgba(19, 23, 34, 0.20)'; ctx.stroke();
+            drawTrackLine(); ctx.lineWidth = isPhoneChart ? 12 : 10; ctx.strokeStyle = '#2962ff'; ctx.shadowColor = 'rgba(41, 98, 255, 0.45)'; ctx.shadowBlur = 18; ctx.stroke(); ctx.shadowBlur = 0;
             
             // 5. 畫終點紅旗
             if (trackLength > left && trackLength < right + 500) {
@@ -674,9 +731,10 @@
             });
 
             // 7. UI 層: 右側價格 Y 軸
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(UI.canvas.width - 60, 50, 60, UI.canvas.height - 80);
-            ctx.strokeStyle = '#e0e3eb'; ctx.beginPath(); ctx.moveTo(UI.canvas.width - 60, 50); ctx.lineTo(UI.canvas.width - 60, UI.canvas.height - 30); ctx.stroke();
-            ctx.fillStyle = '#131722'; ctx.font = '11px Arial'; ctx.textAlign = 'right';
+            const priceAxisW = UI.canvas.width <= 640 ? 46 : 60;
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(UI.canvas.width - priceAxisW, 50, priceAxisW, UI.canvas.height - 80);
+            ctx.strokeStyle = '#e0e3eb'; ctx.beginPath(); ctx.moveTo(UI.canvas.width - priceAxisW, 50); ctx.lineTo(UI.canvas.width - priceAxisW, UI.canvas.height - 30); ctx.stroke();
+            ctx.fillStyle = '#131722'; ctx.font = `${UI.canvas.width <= 640 ? 10 : 11}px Arial`; ctx.textAlign = 'right';
             for(let j=0; j<UI.canvas.height; j+=80) {
                 let simPrice = (700 - (camera.y + (j - 50) / cameraZoom)).toFixed(1);
                 ctx.fillText(simPrice, UI.canvas.width - 8, j + 4 + 50);
@@ -691,17 +749,19 @@
             // 繪製迷因對話框 (不受旋轉影響)
             if (isFrozen && memeTxt) {
                 ctx.save();
-                ctx.translate(0, -160); // 往上移，避免擋住 ID
+                const bubbleW = UI.canvas.width <= 640 ? 360 : 500;
+                const bubbleH = UI.canvas.width <= 640 ? 72 : 80;
+                ctx.translate(0, -135); // 往上移，避免擋住 ID
                 ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#131722'; ctx.lineWidth = 4;
-                ctx.beginPath(); ctx.roundRect(-250, -60, 500, 80, 15); ctx.fill(); ctx.stroke(); // 泡泡變大
-                ctx.beginPath(); ctx.moveTo(-15, 20); ctx.lineTo(0, 45); ctx.lineTo(15, 20); ctx.fill(); ctx.stroke(); // 尾巴
-                ctx.fillStyle = '#f23645'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; // 字體放大為 40px
-                ctx.fillText(memeTxt, 0, -20, 480); // 加上 max-width 防止爆框
+                ctx.beginPath(); ctx.roundRect(-bubbleW / 2, -bubbleH / 2, bubbleW, bubbleH, 15); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-15, bubbleH / 2 - 5); ctx.lineTo(0, bubbleH / 2 + 22); ctx.lineTo(15, bubbleH / 2 - 5); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#f23645'; ctx.font = `bold ${UI.canvas.width <= 640 ? 30 : 40}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(memeTxt, 0, -5, bubbleW - 24);
                 ctx.restore();
             }
 
             ctx.rotate(angle);
-            const riderScale = 2;
+            ctx.translate(0, -8); // 讓輪胎壓在線圖賽道上，而不是整個角色蓋住線
             ctx.scale(riderScale, riderScale);
 
             // 名字 ID (所有人都顯示名字，上移至 -110 避開頭部)
