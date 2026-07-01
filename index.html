@@ -266,7 +266,7 @@
         // 攝影機物件 (相對於世界座標)
         let camera = { x: 0, y: 0 };
         let cameraZoom = 0.44;
-        let riderScale = 0.36;
+        let riderScale = 0.52;
         let audioCtx = null;
         let audioReady = false;
 
@@ -274,8 +274,8 @@
             const isPhone = window.innerWidth <= 640;
             // 再拉遠鏡頭，直式手機也能容納更多股價線圖與玩家
             cameraZoom = isPhone ? 0.44 : 0.42;
-            // 車手再縮小一倍，避免多人同場時互相擋住
-            riderScale = isPhone ? 0.34 : 0.36;
+            // 角色比例取上一版與極小版的平均值，兼顧多人同畫面與辨識度
+            riderScale = isPhone ? 0.51 : 0.54;
         }
 
         function unlockAudio() {
@@ -691,15 +691,15 @@
 
             // 3. 繪製底部成交量與 K 線
             const isPhoneChart = UI.canvas.width <= 640;
-            const candleBodyW = isPhoneChart ? 34 : 24;
-            const candleWickW = isPhoneChart ? 3.5 : 2;
-            const volumeW = isPhoneChart ? 18 : 12;
+            const candleBodyW = isPhoneChart ? 46 : 32;
+            const candleWickW = isPhoneChart ? 5.5 : 3.5;
+            const volumeW = isPhoneChart ? 24 : 16;
             candlesticks.forEach((c, idx) => {
                 if (c.x > left - 100 && c.x < right + 100) {
                     const isUp = c.close >= c.open;
                     const color = isUp ? '#089981' : '#f23645'; 
                     const vHeight = volumes[idx] * 0.5;
-                    ctx.fillStyle = isUp ? 'rgba(8, 153, 129, 0.3)' : 'rgba(242, 54, 69, 0.3)';
+                    ctx.fillStyle = isUp ? 'rgba(8, 153, 129, 0.45)' : 'rgba(242, 54, 69, 0.45)';
                     ctx.fillRect(c.x - volumeW / 2, 1100 - vHeight, volumeW, vHeight); // 量
                     
                     ctx.strokeStyle = color; ctx.lineWidth = candleWickW;
@@ -707,7 +707,7 @@
                     
                     ctx.fillStyle = color;
                     let bodyTop = 700 - Math.max(c.open, c.close);
-                    let bodyHeight = Math.max(2, Math.abs(c.close - c.open));
+                    let bodyHeight = Math.max(isPhoneChart ? 7 : 5, Math.abs(c.close - c.open));
                     ctx.fillRect(c.x - candleBodyW / 2, bodyTop, candleBodyW, bodyHeight); // 實體
                 }
             });
@@ -804,7 +804,7 @@
             ctx.scale(riderScale, riderScale);
 
             // 名字 ID：改放在車手下方，避免跟上方迷因句重疊
-            ctx.fillStyle = color; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillStyle = color; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
             ctx.fillText(name, 0, 34);
 
             // 車身
