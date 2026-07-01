@@ -801,10 +801,25 @@
             const priceAxisW = UI.canvas.width <= 640 ? 46 : 60;
             ctx.fillStyle = '#ffffff'; ctx.fillRect(UI.canvas.width - priceAxisW, 50, priceAxisW, UI.canvas.height - 80);
             ctx.strokeStyle = '#e0e3eb'; ctx.beginPath(); ctx.moveTo(UI.canvas.width - priceAxisW, 50); ctx.lineTo(UI.canvas.width - priceAxisW, UI.canvas.height - 30); ctx.stroke();
-            ctx.fillStyle = '#131722'; ctx.font = `${UI.canvas.width <= 640 ? 10 : 11}px Arial`; ctx.textAlign = 'right';
-            for(let j=0; j<UI.canvas.height; j+=80) {
-                let simPrice = yToPrice(camera.y + (j - 50) / cameraZoom).toFixed(1);
-                ctx.fillText(simPrice, UI.canvas.width - 8, j + 4 + 50);
+            ctx.fillStyle = '#131722'; ctx.font = `${UI.canvas.width <= 640 ? 10 : 11}px Arial`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            // 價格軸必須用「實際畫到的螢幕 Y」反推世界價格；舊版偏移了約 100px，會讓 2026/03 的 $400 看起來像錯誤價格。
+            for(let screenY = 62; screenY < UI.canvas.height - 34; screenY += 80) {
+                const worldY = camera.y + screenY / cameraZoom;
+                const simPrice = yToPrice(worldY).toFixed(1);
+                ctx.fillText(simPrice, UI.canvas.width - 8, screenY);
+            }
+
+            // 目前 K 棒收盤價標籤：直接貼在右側價格軸，方便確認 2026/03 約 $400 的真實價格。
+            const currentCandleForAxis = candlesticks.find(c => c.x >= bike.x) || candlesticks[candlesticks.length - 1];
+            if (currentCandleForAxis) {
+                const priceY = (priceToY(currentCandleForAxis.close) - camera.y) * cameraZoom;
+                if (priceY > 54 && priceY < UI.canvas.height - 34) {
+                    const isUp = currentCandleForAxis.close >= currentCandleForAxis.open;
+                    ctx.fillStyle = isUp ? '#089981' : '#f23645';
+                    ctx.fillRect(UI.canvas.width - priceAxisW + 2, priceY - 11, priceAxisW - 4, 22);
+                    ctx.fillStyle = '#ffffff'; ctx.font = `bold ${UI.canvas.width <= 640 ? 10 : 11}px Arial`; ctx.textAlign = 'center';
+                    ctx.fillText(currentCandleForAxis.close.toFixed(2), UI.canvas.width - priceAxisW / 2, priceY);
+                }
             }
         }
 
