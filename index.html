@@ -265,16 +265,17 @@
         
         // 攝影機物件 (相對於世界座標)
         let camera = { x: 0, y: 0 };
-        let cameraZoom = 0.7;
-        let riderScale = 1.35;
+        let cameraZoom = 0.58;
+        let riderScale = 0.72;
         let audioCtx = null;
         let audioReady = false;
 
         function updateResponsiveScale() {
             const isPhone = window.innerWidth <= 640;
-            // 手機用較近鏡頭，讓股票線圖與車手都更有存在感；桌機保留較廣視野
-            cameraZoom = isPhone ? 0.82 : 0.68;
-            riderScale = isPhone ? 1.35 : 1.45;
+            // 縮小整體視野，讓多人同時出現在同一張股價線圖上
+            cameraZoom = isPhone ? 0.62 : 0.55;
+            // 車手縮小約一半，避免擋住 K 線與彼此重疊
+            riderScale = isPhone ? 0.68 : 0.72;
         }
 
         function unlockAudio() {
@@ -770,8 +771,9 @@
             const bubbleH = isPhone ? 58 : 70;
             const halfW = bubbleW / 2;
             const x = Math.max(12 + halfW, Math.min(UI.canvas.width - 12 - halfW, screenX));
-            const preferAboveY = screenY - (isLandscape ? 92 : 125);
-            const y = preferAboveY < 68 ? Math.min(UI.canvas.height - 82, screenY + 92) : preferAboveY;
+            // 泡泡離角色再遠一點，避免迷因句跟玩家名字重疊；上方不夠才改到下方
+            const preferAboveY = screenY - (isLandscape ? 118 : 150);
+            const y = preferAboveY < 72 ? Math.min(UI.canvas.height - 82, screenY + 118) : preferAboveY;
             ctx.save();
             ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#131722'; ctx.lineWidth = 3;
             ctx.shadowColor = 'rgba(19, 23, 34, 0.18)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
@@ -801,9 +803,9 @@
             ctx.translate(0, -8); // 讓輪胎壓在線圖賽道上，而不是整個角色蓋住線
             ctx.scale(riderScale, riderScale);
 
-            // 名字 ID (所有人都顯示名字，上移至 -110 避開頭部)
-            ctx.fillStyle = color; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText(name, 0, -110);
+            // 名字 ID：改放在車手下方，避免跟上方迷因句重疊
+            ctx.fillStyle = color; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(name, 0, 34);
 
             // 車身
             ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
