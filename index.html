@@ -595,7 +595,7 @@
                 let trackInfo = getTrackData(bike.x);
 
                 if (!bike.isAirborne && bike.isGasBtnDown) {
-                    let accel = 0.55 * dtMultiplier;
+                    let accel = 0.385 * dtMultiplier;
                     bike.vx += accel * Math.cos(trackInfo.angle);
                     bike.vy += accel * Math.sin(trackInfo.angle);
                 }
@@ -630,8 +630,8 @@
                         speedAlongTrack *= Math.pow(0.99, dtMultiplier); 
                         if (!bike.isGasBtnDown) speedAlongTrack *= Math.pow(0.95, dtMultiplier); 
 
-                        // 最高速限限制為 18
-                        if (speedAlongTrack > 18) speedAlongTrack = 18;
+                        // 最高速限放慢 30%，讓日期與 K 線推進更有感
+                        if (speedAlongTrack > 12.6) speedAlongTrack = 12.6;
                         if (speedAlongTrack < -3) speedAlongTrack = -3;
 
                         bike.vx = speedAlongTrack * Math.cos(newTrackInfo.angle);
