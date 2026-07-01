@@ -189,6 +189,7 @@
         
         let peer = null, isHost = false, myId = null;
         let connections = [], hostConnection = null, players = {};
+        let botRiders = [];
         let gameLoopId = null, lastTime = 0;
         
         const myColor = ["#2962ff", "#f23645", "#089981", "#ff9800", "#9c27b0", "#e91e63"][Math.floor(Math.random()*6)];
@@ -405,6 +406,71 @@
             document.getElementById('crash-warning').classList.add('hidden');
         }
 
+        function resetPartyBots() {
+            const botNames = ['阿韭', '吃飽仔', '股神哥', '套牢王'];
+            const botColors = ['#ff9800', '#9c27b0', '#089981', '#f23645'];
+            const count = 3;
+            botRiders = Array.from({ length: count }, (_, i) => {
+                const offset = 120 + i * 210;
+                const track = getTrackData(offset);
+                return {
+                    name: botNames[i], color: botColors[i], x: offset, y: track.y, rot: track.angle,
+                    speed: 5.3 + i * 0.55 + Math.random() * 0.7,
+                    phase: Math.random() * Math.PI * 2,
+                    memeFrozen: false, memeTimer: 0, memeTxt: ''
+                };
+            });
+        }
+
+        function updatePartyBots(dt) {
+            const playerCount = Object.keys(players).length;
+            // 真玩家很多時降低陪跑數量；單人測試時保留熱鬧感
+            const activeBots = playerCount >= 4 ? 0 : (playerCount >= 2 ? 2 : 3);
+            botRiders.forEach((bot, i) => {
+                bot.hidden = i >= activeBots;
+                if (bot.hidden || bike.finished) return;
+                if (bot.memeFrozen) {
+                    bot.memeTimer -= dt;
+                    if (bot.memeTimer <= 0) bot.memeFrozen = false;
+                    return;
+                }
+                bot.phase += dt * 2.1;
+                const rubberBand = Math.max(-1.8, Math.min(2.4, (bike.x - bot.x) * 0.006));
+                bot.x += (bot.speed + Math.sin(bot.phase) * 0.55 + rubberBand) * dt * 60;
+                bot.x = Math.max(35, Math.min(trackLength - 60, bot.x));
+                const track = getTrackData(bot.x);
+                bot.y = track.y - 2;
+                bot.rot = track.angle;
+                if (Math.random() < dt * 0.015) {
+                    bot.memeFrozen = true;
+                    bot.memeTimer = 1.2;
+                    bot.memeTxt = memeQuotes[Math.floor(Math.random() * memeQuotes.length)];
+                }
+            });
+        }
+
+        function screenPos(x, y) {
+            return { x: (x - camera.x) * cameraZoom, y: (y - camera.y) * cameraZoom };
+        }
+
+        function drawRiderIndicator(rider) {
+            if (!rider || rider.hidden) return;
+            const pos = screenPos(rider.x, rider.y);
+            const margin = 18;
+            const visible = pos.x > margin && pos.x < UI.canvas.width - margin && pos.y > 58 && pos.y < UI.canvas.height - 38;
+            if (visible) return;
+            const x = Math.max(52, Math.min(UI.canvas.width - 58, pos.x));
+            const y = Math.max(70, Math.min(UI.canvas.height - 46, pos.y));
+            const arrow = pos.x < 0 ? '←' : pos.x > UI.canvas.width ? '→' : pos.y < 0 ? '↑' : '↓';
+            ctx.save();
+            ctx.globalAlpha = 0.95;
+            ctx.fillStyle = '#ffffff'; ctx.strokeStyle = rider.color || '#2962ff'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.roundRect(x - 46, y - 18, 92, 36, 18); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = rider.color || '#2962ff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(`${arrow} ${rider.name}`, x, y, 82);
+            ctx.restore();
+        }
+
         function setupPeerEvents(targetPeer) {
             targetPeer.on('open', (id) => {
                 myId = id;
@@ -518,9 +584,9 @@
             UI.container.classList.remove('bg-[#ffffff]', 'bg-opacity-95');
             UI.container.classList.add('pointer-events-none', 'bg-transparent');
             UI.lobby.classList.add('hidden'); UI.result.classList.add('hidden'); UI.hud.classList.remove('hidden');
-            resetBike(); resizeCanvas(); startTime = Date.now();
+            resetBike(); resetPartyBots(); resizeCanvas(); startTime = Date.now();
             
-            const pressGas = (e) => { if(e) e.preventDefault(); bike.isGasBtnDown = true; };
+            const pressGas = (e) => { if(e) e.preventDefault(); unlockAudio(); bike.isGasBtnDown = true; };
             const releaseGas = (e) => { if(e) e.preventDefault(); bike.isGasBtnDown = false; };
             
             UI.btnGas.ontouchstart = pressGas; UI.btnGas.ontouchend = releaseGas;
@@ -741,25 +807,40 @@
             }
         }
 
+        function drawSpeechBubble(screenX, screenY, memeTxt, color = '#f23645') {
+            const isPhone = UI.canvas.width <= 640;
+            const isLandscape = UI.canvas.width > UI.canvas.height;
+            const bubbleW = Math.min(isLandscape ? 380 : 360, UI.canvas.width - 24);
+            const bubbleH = isPhone ? 58 : 70;
+            const halfW = bubbleW / 2;
+            const x = Math.max(12 + halfW, Math.min(UI.canvas.width - 12 - halfW, screenX));
+            const preferAboveY = screenY - (isLandscape ? 92 : 125);
+            const y = preferAboveY < 68 ? Math.min(UI.canvas.height - 82, screenY + 92) : preferAboveY;
+            ctx.save();
+            ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#131722'; ctx.lineWidth = 3;
+            ctx.shadowColor = 'rgba(19, 23, 34, 0.18)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+            ctx.beginPath(); ctx.roundRect(x - halfW, y - bubbleH / 2, bubbleW, bubbleH, 14); ctx.fill(); ctx.stroke();
+            ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+            const tailX = Math.max(x - halfW + 28, Math.min(x + halfW - 28, screenX));
+            const tailDir = y < screenY ? 1 : -1;
+            ctx.beginPath();
+            ctx.moveTo(tailX - 13, y + tailDir * bubbleH / 2);
+            ctx.lineTo(screenX, y + tailDir * (bubbleH / 2 + 22));
+            ctx.lineTo(tailX + 13, y + tailDir * bubbleH / 2);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = color; ctx.font = `bold ${isPhone ? 24 : 32}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(memeTxt, x, y, bubbleW - 24);
+            ctx.restore();
+        }
+
         function drawBicycle(x, y, angle, color, name, isCrashed, isFrozen, memeTxt) {
+            const pos = screenPos(x, y);
+            if (isFrozen && memeTxt) drawSpeechBubble(pos.x, pos.y, memeTxt, color);
+
             ctx.save();
             ctx.scale(cameraZoom, cameraZoom);
             ctx.translate((x - camera.x), (y - camera.y)); // 依據世界相機定位
             
-            // 繪製迷因對話框 (不受旋轉影響)
-            if (isFrozen && memeTxt) {
-                ctx.save();
-                const bubbleW = UI.canvas.width <= 640 ? 360 : 500;
-                const bubbleH = UI.canvas.width <= 640 ? 72 : 80;
-                ctx.translate(0, -135); // 往上移，避免擋住 ID
-                ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#131722'; ctx.lineWidth = 4;
-                ctx.beginPath(); ctx.roundRect(-bubbleW / 2, -bubbleH / 2, bubbleW, bubbleH, 15); ctx.fill(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(-15, bubbleH / 2 - 5); ctx.lineTo(0, bubbleH / 2 + 22); ctx.lineTo(15, bubbleH / 2 - 5); ctx.fill(); ctx.stroke();
-                ctx.fillStyle = '#f23645'; ctx.font = `bold ${UI.canvas.width <= 640 ? 30 : 40}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(memeTxt, 0, -5, bubbleW - 24);
-                ctx.restore();
-            }
-
             ctx.rotate(angle);
             ctx.translate(0, -8); // 讓輪胎壓在線圖賽道上，而不是整個角色蓋住線
             ctx.scale(riderScale, riderScale);
@@ -795,8 +876,10 @@
             if (dt > 0.1) dt = 0.1; 
             
             updatePhysics(dt);
+            updatePartyBots(dt);
             drawTradingViewChart();
 
+            botRiders.forEach(bot => { if (!bot.hidden) drawBicycle(bot.x, bot.y, bot.rot, bot.color, bot.name, false, bot.memeFrozen, bot.memeTxt); });
             for (let id in players) {
                 if (id !== myId) {
                     const p = players[id];
@@ -804,6 +887,8 @@
                 }
             }
             drawBicycle(bike.x, bike.y, bike.angle, myColor, myName, bike.isCrashed, bike.isMemeFrozen, bike.memeText);
+            botRiders.forEach(drawRiderIndicator);
+            for (let id in players) { if (id !== myId) drawRiderIndicator(players[id]); }
 
             syncNetwork(); checkFinish();
             if (!bike.finished || isHost) gameLoopId = requestAnimationFrame(gameLoop);
