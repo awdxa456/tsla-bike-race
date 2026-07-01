@@ -265,17 +265,17 @@
         
         // 攝影機物件 (相對於世界座標)
         let camera = { x: 0, y: 0 };
-        let cameraZoom = 0.58;
-        let riderScale = 0.72;
+        let cameraZoom = 0.44;
+        let riderScale = 0.36;
         let audioCtx = null;
         let audioReady = false;
 
         function updateResponsiveScale() {
             const isPhone = window.innerWidth <= 640;
-            // 縮小整體視野，讓多人同時出現在同一張股價線圖上
-            cameraZoom = isPhone ? 0.62 : 0.55;
-            // 車手縮小約一半，避免擋住 K 線與彼此重疊
-            riderScale = isPhone ? 0.68 : 0.72;
+            // 再拉遠鏡頭，直式手機也能容納更多股價線圖與玩家
+            cameraZoom = isPhone ? 0.44 : 0.42;
+            // 車手再縮小一倍，避免多人同場時互相擋住
+            riderScale = isPhone ? 0.34 : 0.36;
         }
 
         function unlockAudio() {
