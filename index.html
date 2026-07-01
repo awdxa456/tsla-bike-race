@@ -618,9 +618,27 @@
         window.addEventListener('resize', resizeCanvas);
         function resizeCanvas() { UI.canvas.width = window.innerWidth; UI.canvas.height = window.innerHeight; updateResponsiveScale(); }
 
+        function getCatchUpMultiplier() {
+            const raceRiders = [];
+            for (let id in players) {
+                if (players[id]) raceRiders.push({ id, x: players[id].x || 0 });
+            }
+            if (!raceRiders.find(r => r.id === myId)) raceRiders.push({ id: myId, x: bike.x });
+            raceRiders.forEach(r => { if (r.id === myId) r.x = bike.x; });
+            if (raceRiders.length <= 1) return 1;
+
+            // 追尾機制：每落後一名，最高速度與加速度相對前一名再提高 10%。
+            // 例如三人局：第 1 名 1.00x、第 2 名 1.10x、第 3 名 1.21x。
+            // 已到終點的玩家仍算在前方，讓最後一名也能被拉近、避免等太久。
+            const tolerance = 20; // 起跑或幾乎並排時視為同名次，避免一開局就有加成。
+            const ridersAhead = raceRiders.filter(r => r.id !== myId && r.x > bike.x + tolerance).length;
+            return Math.pow(1.1, ridersAhead);
+        }
+
         function updatePhysics(dt) {
             if (bike.finished) return;
             let dtMultiplier = dt * 60; 
+            const catchUpMultiplier = getCatchUpMultiplier();
 
             // 迷因發作：突然煞車並大喊 (保證發作)
             if (bike.memeTriggerXs.length > 0 && bike.x > bike.memeTriggerXs[0]) {
@@ -651,7 +669,7 @@
                 let trackInfo = getTrackData(bike.x);
 
                 if (!bike.isAirborne && bike.isGasBtnDown) {
-                    let accel = 0.385 * dtMultiplier;
+                    let accel = 0.385 * catchUpMultiplier * dtMultiplier;
                     bike.vx += accel * Math.cos(trackInfo.angle);
                     bike.vy += accel * Math.sin(trackInfo.angle);
                 }
@@ -686,8 +704,9 @@
                         speedAlongTrack *= Math.pow(0.99, dtMultiplier); 
                         if (!bike.isGasBtnDown) speedAlongTrack *= Math.pow(0.95, dtMultiplier); 
 
-                        // 最高速限放慢 30%，讓日期與 K 線推進更有感
-                        if (speedAlongTrack > 12.6) speedAlongTrack = 12.6;
+                        // 最高速限放慢 30%，並套用多人追尾加成
+                        const maxSpeed = 12.6 * catchUpMultiplier;
+                        if (speedAlongTrack > maxSpeed) speedAlongTrack = maxSpeed;
                         if (speedAlongTrack < -3) speedAlongTrack = -3;
 
                         bike.vx = speedAlongTrack * Math.cos(newTrackInfo.angle);
