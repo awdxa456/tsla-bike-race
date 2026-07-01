@@ -190,6 +190,7 @@
         let peer = null, isHost = false, myId = null;
         let connections = [], hostConnection = null, players = {};
         let gameLoopId = null, lastTime = 0;
+        let raceResultsShown = false;
         
         const myColor = ["#2962ff", "#f23645", "#089981", "#ff9800", "#9c27b0", "#e91e63"][Math.floor(Math.random()*6)];
         
@@ -537,6 +538,7 @@
                     players[data.id].crashed = data.crashed; players[data.id].finished = data.finished;
                     players[data.id].memeFrozen = data.memeFrozen; players[data.id].memeTxt = data.memeTxt;
                     if(data.finished && !players[data.id].finishTime) players[data.id].finishTime = data.time;
+                    if (data.finished) setTimeout(checkAllFinished, 50);
                 }
             }
         }
@@ -563,6 +565,11 @@
                 }
                 if (data.type === 'start_game') startGame(); else prepareRematch();
             }
+            if (data.type === 'race_finished') {
+                players = data.players || players;
+                updatePlayerList();
+                showResults(players);
+            }
             if (data.type === 'sync_all') {
                 for (let id in data.players) {
                     if (id !== myId && players[id]) {
@@ -588,6 +595,7 @@
             UI.container.classList.remove('bg-[#ffffff]', 'bg-opacity-95');
             UI.container.classList.add('pointer-events-none', 'bg-transparent');
             UI.lobby.classList.add('hidden'); UI.result.classList.add('hidden'); UI.hud.classList.remove('hidden');
+            raceResultsShown = false;
             resetBike(); resizeCanvas(); startTime = Date.now();
             
             const pressGas = (e) => { if(e) e.preventDefault(); unlockAudio(); bike.isGasBtnDown = true; };
@@ -602,6 +610,7 @@
         }
 
         function prepareRematch() {
+            raceResultsShown = false;
             for(let id in players) { players[id].finished = false; players[id].finishTime = 0; }
             startGame();
         }
@@ -910,8 +919,8 @@
             if (!bike.finished || isHost) gameLoopId = requestAnimationFrame(gameLoop);
         }
 
-        function syncNetwork() {
-            if (Math.floor(Date.now() / 50) % 2 === 0) {
+        function syncNetwork(force = false) {
+            if (force || Math.floor(Date.now() / 50) % 2 === 0) {
                 const myState = { type: 'sync', id: myId, x: bike.x, y: bike.y, rot: bike.angle, crashed: bike.isCrashed, finished: bike.finished, time: bike.finishTime, memeFrozen: bike.isMemeFrozen, memeTxt: bike.memeText };
                 if (isHost) {
                     players[myId].x = bike.x; players[myId].y = bike.y; players[myId].rot = bike.angle; 
@@ -928,11 +937,15 @@
         function checkFinish() {
             if (!bike.finished && bike.x >= trackLength) {
                 bike.finished = true; bike.finishTime = Date.now() - startTime;
+                // 到終點這一幀原本可能已經先 sync 過，客戶端下一幀又會停止，
+                // 所以必須立刻強制送出 finished 狀態，否則主機永遠等不到最後一人。
+                syncNetwork(true);
                 setTimeout(checkAllFinished, 1000);
             }
         }
 
         function checkAllFinished() {
+            if (raceResultsShown) return;
             let allDone = true, results = [];
             for (let id in players) {
                 if (!players[id].finished) allDone = false;
@@ -940,22 +953,37 @@
             }
 
             if (allDone && results.length > 0) {
-                cancelAnimationFrame(gameLoopId);
-                UI.hud.classList.add('hidden'); UI.container.classList.remove('pointer-events-none', 'bg-transparent'); UI.container.classList.add('bg-[#ffffff]', 'bg-opacity-90'); UI.result.classList.remove('hidden');
-                if (isHost) { UI.btnRematch.classList.remove('hidden'); UI.btnWaitRematch.classList.add('hidden'); } 
-                else { UI.btnRematch.classList.add('hidden'); UI.btnWaitRematch.classList.remove('hidden'); }
-
-                results.sort((a, b) => a.time - b.time);
-                UI.board.innerHTML = '';
-                results.forEach((r, index) => {
-                    const isLoser = index === results.length - 1;
-                    const el = document.createElement('div');
-                    el.className = `flex justify-between p-3 rounded font-bold ${isLoser ? 'bg-[#fff0f0] text-[#f23645]' : 'bg-white text-[#131722]'}`;
-                    el.innerHTML = `<span>#${index + 1} ${r.name}</span> <span class="font-mono">${(r.time / 1000).toFixed(2)}s</span>`;
-                    UI.board.appendChild(el);
-                    if (isLoser) UI.loserName.textContent = r.name;
-                });
+                if (isHost) connections.forEach(c => c.send({ type: 'race_finished', players: players }));
+                showResults(players);
             } else if (bike.finished) setTimeout(checkAllFinished, 1000); 
+        }
+
+        function showResults(resultPlayers) {
+            if (raceResultsShown) return;
+            raceResultsShown = true;
+            const results = [];
+            for (let id in resultPlayers) {
+                if (resultPlayers[id].finished) results.push({ name: resultPlayers[id].name, time: resultPlayers[id].finishTime });
+            }
+            if (!results.length) { raceResultsShown = false; return; }
+            cancelAnimationFrame(gameLoopId);
+            UI.hud.classList.add('hidden');
+            UI.container.classList.remove('pointer-events-none', 'bg-transparent');
+            UI.container.classList.add('bg-[#ffffff]', 'bg-opacity-90');
+            UI.result.classList.remove('hidden');
+            if (isHost) { UI.btnRematch.classList.remove('hidden'); UI.btnWaitRematch.classList.add('hidden'); } 
+            else { UI.btnRematch.classList.add('hidden'); UI.btnWaitRematch.classList.remove('hidden'); }
+
+            results.sort((a, b) => a.time - b.time);
+            UI.board.innerHTML = '';
+            results.forEach((r, index) => {
+                const isLoser = index === results.length - 1;
+                const el = document.createElement('div');
+                el.className = `flex justify-between p-3 rounded font-bold ${isLoser ? 'bg-[#fff0f0] text-[#f23645]' : 'bg-white text-[#131722]'}`;
+                el.innerHTML = `<span>#${index + 1} ${r.name}</span> <span class="font-mono">${(r.time / 1000).toFixed(2)}s</span>`;
+                UI.board.appendChild(el);
+                if (isLoser) UI.loserName.textContent = r.name;
+            });
         }
     </script>
 </body>
